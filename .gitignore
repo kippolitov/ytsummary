@@ -23,7 +23,7 @@ Thumbs.db
 *.swp
 
 # Editor
-.vscode/
+
 .idea/
 *.iml
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { HttpRequest, InvocationContext } from "@azure/functions";
 
 // We mock the orchestrator to use recorded/fixture responses rather than hitting real OpenAI
@@ -6,8 +6,13 @@ vi.mock("../../src/services/openaiOrchestrator", () => ({
   orchestrateAnalysis: vi.fn(),
 }));
 
+vi.mock("../../src/services/transcriptFetcher", () => ({
+  fetchTranscript: vi.fn(),
+}));
+
 import { analyzeHandler } from "../../src/analyze/index";
 import { orchestrateAnalysis } from "../../src/services/openaiOrchestrator";
+import { fetchTranscript } from "../../src/services/transcriptFetcher";
 
 const fixtureResult = {
   videoId: "abc12345678",
@@ -76,7 +81,10 @@ describe("POST /api/analyze — integration", () => {
     expect(response.status).toBe(400);
   });
 
-  it("returns 400 when transcript is empty", async () => {
+  it("fetches transcript from YouTube when transcript is empty and succeeds", async () => {
+    (fetchTranscript as ReturnType<typeof vi.fn>).mockResolvedValue("Fetched transcript text.");
+    (orchestrateAnalysis as ReturnType<typeof vi.fn>).mockResolvedValue(fixtureResult);
+
     const req = makeRequest({
       videoId: "abc12345678",
       title: "Title",
@@ -86,7 +94,24 @@ describe("POST /api/analyze — integration", () => {
     });
 
     const response = await analyzeHandler(req, makeContext());
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
+  });
+
+  it("returns 422 when transcript is empty and YouTube fetch also fails", async () => {
+    (fetchTranscript as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const req = makeRequest({
+      videoId: "abc12345678",
+      title: "Title",
+      channelName: "Chan",
+      transcript: "",
+      durationSeconds: 60,
+    });
+
+    const response = await analyzeHandler(req, makeContext());
+    expect(response.status).toBe(422);
+    const body = response.jsonBody as { error: { code: string } };
+    expect(body.error.code).toBe("no-transcript");
   });
 
   it("returns 422 when transcript exceeds 200000 chars", async () => {

@@ -48,14 +48,11 @@ export function isAnalyzeRequest(body: unknown): body is AnalyzeRequest {
     typeof b.videoId === "string" &&
     /^[a-zA-Z0-9_-]{11}$/.test(b.videoId) &&
     typeof b.title === "string" &&
-    b.title.length > 0 &&
     b.title.length <= 500 &&
     typeof b.channelName === "string" &&
-    b.channelName.length > 0 &&
     b.channelName.length <= 200 &&
     typeof b.transcript === "string" &&
-    b.transcript.length > 0 &&
     typeof b.durationSeconds === "number" &&
-    b.durationSeconds > 0
+    b.durationSeconds >= 0
   );
 }
