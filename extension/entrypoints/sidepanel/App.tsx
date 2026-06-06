@@ -2,10 +2,17 @@ import { useEffect, useState } from "react";
 import { KnowledgePanel } from "../../components/KnowledgePanel/KnowledgePanel";
 import { LoadingIndicator } from "../../components/shared/LoadingIndicator";
 import { ErrorMessage } from "../../components/shared/ErrorMessage";
+import { TabBar } from "../../components/shared/TabBar";
+import { ChatPanel } from "../../components/Chat/ChatPanel";
 import { getLastVideo, getResult } from "../../services/sessionCache";
 import { MessageType } from "../../types/messages";
 import type { ExtensionMessage } from "../../types/messages";
 import type { KnowledgePanelState } from "../../types/index";
+
+const TABS = [
+  { id: "summary", label: "Summary" },
+  { id: "chat", label: "Chat" },
+];
 
 const INITIAL_STATE: KnowledgePanelState = {
   videoId: "",
@@ -19,6 +26,7 @@ export function App() {
   const [state, setState] = useState<KnowledgePanelState>(INITIAL_STATE);
   const [videoTitle, setVideoTitle] = useState<string>("");
   const [channelName, setChannelName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("summary");
 
   useEffect(() => {
     async function hydrate() {
@@ -79,6 +87,7 @@ export function App() {
         });
         setVideoTitle("");
         setChannelName("");
+        setActiveTab("summary");
       } else if (message.type === MessageType.TRANSCRIPT_READY) {
         setVideoTitle(message.video.title);
         setChannelName(message.video.channelName);
@@ -99,15 +108,19 @@ export function App() {
   };
 
   return (
-    <main className="min-h-screen max-w-panel bg-gray-50" style={{ width: "400px" }}>
-      <div className="flex items-center justify-end border-b border-gray-100 px-3 py-1">
+    <main className="flex h-screen flex-col bg-gray-50" style={{ width: "400px" }}>
+      <div className="flex items-center justify-between border-b border-gray-100 px-3 py-1">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+          {videoTitle ? videoTitle.slice(0, 35) + (videoTitle.length > 35 ? "…" : "") : "YouTube AI"}
+        </span>
         <button
           onClick={handleRetry}
           title="Refresh summary"
+          aria-label="Refresh summary"
           className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
           disabled={state.status === "loading"}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
             <path d="M21 3v5h-5" />
             <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
@@ -116,40 +129,54 @@ export function App() {
         </button>
       </div>
 
-      {state.status === "idle" && (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <p className="text-sm text-gray-500">Navigate to a YouTube video to analyze it.</p>
-        </div>
-      )}
+      <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {state.status === "loading" && <LoadingIndicator />}
-
-      {state.status === "ready" && state.result && (
-        <KnowledgePanel
-          result={state.result}
-          videoTitle={videoTitle}
-          channelName={channelName}
-        />
-      )}
-
-      {state.status === "error" && state.error && (
-        <div className="p-4">
-          <ErrorMessage error={state.error} onRetry={handleRetry} />
-        </div>
-      )}
-
-      {state.status === "no-transcript" && (
-        <div className="p-4">
-          <div className="rounded-lg bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-800">
-              No captions available
-            </p>
-            <p className="mt-1 text-sm text-amber-700">
-              This video doesn't have captions. Try a video with captions enabled.
-            </p>
+      <div className="flex-1 overflow-hidden">
+        {activeTab === "summary" && (
+          <div
+            id="panel-summary"
+            role="tabpanel"
+            aria-labelledby="tab-summary"
+            className="h-full overflow-y-auto"
+          >
+            {state.status === "idle" && (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <p className="text-sm text-gray-500">Navigate to a YouTube video to analyze it.</p>
+              </div>
+            )}
+            {state.status === "loading" && <LoadingIndicator />}
+            {state.status === "ready" && state.result && (
+              <KnowledgePanel result={state.result} videoTitle={videoTitle} channelName={channelName} />
+            )}
+            {state.status === "error" && state.error && (
+              <div className="p-4">
+                <ErrorMessage error={state.error} onRetry={handleRetry} />
+              </div>
+            )}
+            {state.status === "no-transcript" && (
+              <div className="p-4">
+                <div className="rounded-lg bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-800">No captions available</p>
+                  <p className="mt-1 text-sm text-amber-700">
+                    This video doesn't have captions. Try a video with captions enabled.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {activeTab === "chat" && (
+          <div
+            id="panel-chat"
+            role="tabpanel"
+            aria-labelledby="tab-chat"
+            className="h-full"
+          >
+            <ChatPanel videoId={state.videoId} />
+          </div>
+        )}
+      </div>
     </main>
   );
 }

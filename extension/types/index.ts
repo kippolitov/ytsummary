@@ -1,3 +1,5 @@
+export type { ChatMessage, ChatSession, ChatHistoryItem, ChatRequest, ChatStreamChunk, ChatRole, ChatMessageType } from "./chat";
+
 export interface Video {
   videoId: string;
   title: string;
