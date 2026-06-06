@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { orchestrateAnalysis } from "../../src/services/openaiOrchestrator";
 import type { AnalyzeRequest } from "../../src/models/index";
 
-vi.mock("@azure/openai", () => ({
+vi.mock("openai", () => ({
   AzureOpenAI: vi.fn().mockImplementation(() => ({
     chat: {
       completions: {
@@ -29,7 +29,7 @@ describe("openaiOrchestrator", () => {
   });
 
   it("prompt construction contains the transcript text", async () => {
-    const { AzureOpenAI } = await import("@azure/openai");
+    const { AzureOpenAI } = await import("openai");
     const mockCreate = vi.fn().mockResolvedValue({
       choices: [
         {
@@ -44,7 +44,7 @@ describe("openaiOrchestrator", () => {
         },
       ],
     });
-    (AzureOpenAI as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       chat: { completions: { create: mockCreate } },
     }));
 
@@ -57,14 +57,14 @@ describe("openaiOrchestrator", () => {
   });
 
   it("parses valid JSON response into AnalyzeResponse", async () => {
-    const { AzureOpenAI } = await import("@azure/openai");
+    const { AzureOpenAI } = await import("openai");
     const responsePayload = {
       summary: "Test summary.",
       topics: [{ name: "DI", description: "Dependency Injection", timestampSeconds: 30 }],
       steps: [{ order: 1, text: "Step one", timestampSeconds: null }],
       references: [],
     };
-    (AzureOpenAI as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
@@ -82,8 +82,8 @@ describe("openaiOrchestrator", () => {
   });
 
   it("throws a structured error on malformed JSON response", async () => {
-    const { AzureOpenAI } = await import("@azure/openai");
-    (AzureOpenAI as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    const { AzureOpenAI } = await import("openai");
+    (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({

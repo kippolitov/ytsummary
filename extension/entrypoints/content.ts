@@ -1,8 +1,6 @@
-import { extractTranscript } from "../services/transcriptExtractor";
 import { MessageType } from "../types/messages";
 import type {
   TranscriptReadyMessage,
-  NoTranscriptMessage,
   VideoChangedMessage,
 } from "../types/messages";
 import type { Video } from "../types/index";
@@ -11,72 +9,43 @@ export default defineContentScript({
   matches: ["*://www.youtube.com/watch*"],
   runAt: "document_idle",
   main() {
-    void analyzeCurrentVideo();
+    window.addEventListener("message", (event) => {
+      if (event.source !== window) return;
+      const data = event.data as Record<string, unknown> | null;
+      if (!data?.type) return;
 
-    window.addEventListener("yt-navigate-finish", () => {
-      const videoId = extractVideoId();
-      if (!videoId) return;
-
-      const changedMsg: VideoChangedMessage = {
-        type: MessageType.VIDEO_CHANGED,
-        videoId,
-      };
-      chrome.runtime.sendMessage(changedMsg);
-
-      void analyzeCurrentVideo();
+      if (data.type === "YT_VIDEO_CHANGED") {
+        const msg: VideoChangedMessage = {
+          type: MessageType.VIDEO_CHANGED,
+          videoId: data.videoId as string,
+        };
+        chrome.runtime.sendMessage(msg).catch(() => {});
+      } else if (data.type === "YT_TRANSCRIPT") {
+        const video: Video = {
+          videoId: data.videoId as string,
+          title: getVideoTitle(),
+          channelName: getChannelName(),
+          url: window.location.href,
+          durationSeconds: 0,
+          transcript: (data.transcript as string) ?? "",
+        };
+        const msg: TranscriptReadyMessage = {
+          type: MessageType.TRANSCRIPT_READY,
+          video,
+        };
+        chrome.runtime.sendMessage(msg).catch(() => {});
+      }
     });
   },
 });
 
-function extractVideoId(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("v");
+function getVideoTitle(): string {
+  return document.title.replace(/\s*[-–]\s*YouTube\s*$/, "").trim();
 }
 
-interface YtPlayerResponse {
-  videoDetails?: {
-    videoId?: string;
-    title?: string;
-    author?: string;
-    lengthSeconds?: string;
-  };
-}
-
-function getPlayerResponse(): YtPlayerResponse | null {
-  const w = globalThis as unknown as { ytInitialPlayerResponse?: YtPlayerResponse };
-  return w.ytInitialPlayerResponse ?? null;
-}
-
-async function analyzeCurrentVideo(): Promise<void> {
-  const videoId = extractVideoId();
-  if (!videoId) return;
-
-  const playerResponse = getPlayerResponse();
-  const details = playerResponse?.videoDetails;
-
-  const transcript = await extractTranscript();
-
-  if (!transcript) {
-    const msg: NoTranscriptMessage = {
-      type: MessageType.NO_TRANSCRIPT,
-      videoId,
-    };
-    chrome.runtime.sendMessage(msg);
-    return;
-  }
-
-  const video: Video = {
-    videoId,
-    title: details?.title ?? "",
-    channelName: details?.author ?? "",
-    url: window.location.href,
-    durationSeconds: details?.lengthSeconds ? parseInt(details.lengthSeconds, 10) : 0,
-    transcript,
-  };
-
-  const msg: TranscriptReadyMessage = {
-    type: MessageType.TRANSCRIPT_READY,
-    video,
-  };
-  chrome.runtime.sendMessage(msg);
+function getChannelName(): string {
+  const meta = document.querySelector<HTMLMetaElement>('meta[itemprop="author"]');
+  if (meta?.content) return meta.content;
+  const link = document.querySelector<HTMLLinkElement>('link[itemprop="name"]');
+  return link?.getAttribute("content") ?? "";
 }

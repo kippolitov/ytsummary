@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { orchestrateAnalysis } from "../../src/services/openaiOrchestrator";
 import type { AnalyzeRequest } from "../../src/models/index";
 
-vi.mock("@azure/openai", () => ({
+vi.mock("openai", () => ({
   AzureOpenAI: vi.fn(),
 }));
 
@@ -33,8 +33,8 @@ describe("openaiOrchestrator — steps extraction", () => {
   });
 
   it("tutorial transcript produces non-empty steps array", async () => {
-    const { AzureOpenAI } = await import("@azure/openai");
-    (AzureOpenAI as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    const { AzureOpenAI } = await import("openai");
+    (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
@@ -63,8 +63,8 @@ describe("openaiOrchestrator — steps extraction", () => {
   });
 
   it("opinion piece transcript produces empty steps array", async () => {
-    const { AzureOpenAI } = await import("@azure/openai");
-    (AzureOpenAI as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    const { AzureOpenAI } = await import("openai");
+    (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({

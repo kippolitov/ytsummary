@@ -1,5 +1,5 @@
 import { postAnalysis } from "../services/analysisClient";
-import { getResult, hasResult, setResult } from "../services/sessionCache";
+import { getResult, hasResult, setResult, setLastVideo, getLastVideo } from "../services/sessionCache";
 import { MessageType } from "../types/messages";
 import type {
   ExtensionMessage,
@@ -10,6 +10,8 @@ import type { PanelError, Video } from "../types/index";
 
 export default defineBackground({
   main() {
+    void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
     chrome.runtime.onMessage.addListener(
       (message: ExtensionMessage, _sender, sendResponse) => {
         if (message.type === MessageType.TRANSCRIPT_READY) {
@@ -27,6 +29,7 @@ export default defineBackground({
 });
 
 async function handleTranscriptReady(video: Video): Promise<void> {
+  await setLastVideo({ videoId: video.videoId, title: video.title, channelName: video.channelName });
   const cached = await hasResult(video.videoId);
   if (cached) {
     const result = await getResult(video.videoId);
@@ -76,14 +79,13 @@ async function handleNoTranscript(videoId: string): Promise<void> {
 }
 
 async function handleRetryAnalysis(videoId: string): Promise<void> {
-  const cached = await getResult(videoId);
-  if (!cached) return;
+  const lastVideo = await getLastVideo();
 
   try {
     const result = await postAnalysis({
       videoId,
-      title: "",
-      channelName: "",
+      title: lastVideo?.title ?? "",
+      channelName: lastVideo?.channelName ?? "",
       url: "",
       durationSeconds: 0,
       transcript: "",

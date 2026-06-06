@@ -1,4 +1,4 @@
-import { AzureOpenAI } from "@azure/openai";
+import { AzureOpenAI } from "openai";
 import type { AnalyzeRequest, AnalyzeResponse } from "../models/index";
 
 function buildPrompt(req: AnalyzeRequest): string {

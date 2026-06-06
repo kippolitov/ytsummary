@@ -1,6 +1,7 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { isAnalyzeRequest } from "../models/index";
 import { orchestrateAnalysis } from "../services/openaiOrchestrator";
+import { fetchTranscript } from "../services/transcriptFetcher";
 
 export async function analyzeHandler(
   request: HttpRequest,
@@ -16,15 +17,25 @@ export async function analyzeHandler(
   }
 
   if (!isAnalyzeRequest(body)) {
-    return errorResponse(400, "invalid-request", "Missing or invalid required fields: videoId, title, channelName, transcript, durationSeconds.");
+    return errorResponse(400, "invalid-request", "Missing or invalid required fields: videoId, title, channelName, durationSeconds.");
   }
 
-  if (body.transcript.length > 200_000) {
+  let transcript = body.transcript;
+
+  if (transcript.length === 0) {
+    const fetched = await fetchTranscript(body.videoId);
+    if (!fetched) {
+      return errorResponse(422, "no-transcript", "No transcript is available for this video.");
+    }
+    transcript = fetched;
+  }
+
+  if (transcript.length > 200_000) {
     return errorResponse(422, "transcript-too-long", "Video is too long to analyze in v1.");
   }
 
   try {
-    const result = await orchestrateAnalysis(body);
+    const result = await orchestrateAnalysis({ ...body, transcript });
     return {
       status: 200,
       headers: corsHeaders(),

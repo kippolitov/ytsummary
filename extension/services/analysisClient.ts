@@ -23,17 +23,19 @@ export async function postAnalysis(video: Video): Promise<AnalysisResult> {
     durationSeconds: video.durationSeconds,
   };
 
+  const endpoint = new URL(WXT_AZURE_FUNCTION_URL);
+  if (WXT_AZURE_FUNCTION_KEY) {
+    endpoint.searchParams.set("code", WXT_AZURE_FUNCTION_KEY);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   let response: Response;
   try {
-    response = await fetch(WXT_AZURE_FUNCTION_URL, {
+    response = await fetch(endpoint.toString(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": WXT_AZURE_FUNCTION_KEY,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal: controller.signal,
     });

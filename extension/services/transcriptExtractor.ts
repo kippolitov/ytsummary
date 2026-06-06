@@ -24,31 +24,32 @@ export async function extractTranscript(): Promise<string | null> {
   if (!tracks || tracks.length === 0) return null;
 
   const baseUrl = tracks[0].baseUrl;
-  const url = baseUrl.includes("?")
-    ? `${baseUrl}&fmt=srv1`
-    : `${baseUrl}?fmt=srv1`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(baseUrl);
     if (!response.ok) return null;
 
     const xml = await response.text();
+    if (!xml || xml.length === 0) return null;
+
     return parseTimedText(xml);
   } catch {
     return null;
   }
 }
 
-function parseTimedText(xml: string): string {
+function parseTimedText(xml: string): string | null {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xml, "text/xml");
   const textNodes = doc.querySelectorAll("text");
-  const segments: string[] = [];
+  if (textNodes.length === 0) return null;
 
+  const segments: string[] = [];
   textNodes.forEach((node) => {
     const text = node.textContent?.trim();
     if (text) segments.push(text);
   });
 
-  return segments.join(" ");
+  const result = segments.join(" ").trim();
+  return result.length > 0 ? result : null;
 }
