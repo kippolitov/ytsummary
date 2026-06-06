@@ -41,6 +41,35 @@ export interface FunctionError {
   };
 }
 
+export type ChatMode = "chat" | "blog-post";
+
+export interface ChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatRequest {
+  videoId: string;
+  videoTitle: string;
+  transcript: string;
+  messages: ChatHistoryItem[];
+  mode?: ChatMode;
+}
+
+export function isChatRequest(body: unknown): body is ChatRequest {
+  if (typeof body !== "object" || body === null) return false;
+  const b = body as Record<string, unknown>;
+  return (
+    typeof b.videoId === "string" &&
+    /^[a-zA-Z0-9_-]{11}$/.test(b.videoId) &&
+    typeof b.videoTitle === "string" &&
+    b.videoTitle.length <= 500 &&
+    typeof b.transcript === "string" &&
+    Array.isArray(b.messages) &&
+    b.messages.length >= 1
+  );
+}
+
 export function isAnalyzeRequest(body: unknown): body is AnalyzeRequest {
   if (typeof body !== "object" || body === null) return false;
   const b = body as Record<string, unknown>;

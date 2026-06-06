@@ -7,7 +7,8 @@
   "functionTimeout": "00:00:50",
   "extensions": {
     "http": {
-      "routePrefix": "api"
+      "routePrefix": "api",
+      "enableHttpStreams": true
     }
   },
   "logging": {

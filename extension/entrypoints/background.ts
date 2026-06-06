@@ -1,5 +1,5 @@
 import { postAnalysis } from "../services/analysisClient";
-import { getResult, hasResult, setResult, setLastVideo, getLastVideo } from "../services/sessionCache";
+import { getResult, hasResult, setResult, setLastVideo, getLastVideo, storeVideo } from "../services/sessionCache";
 import { MessageType } from "../types/messages";
 import type {
   ExtensionMessage,
@@ -30,6 +30,7 @@ export default defineBackground({
 
 async function handleTranscriptReady(video: Video): Promise<void> {
   await setLastVideo({ videoId: video.videoId, title: video.title, channelName: video.channelName });
+  await storeVideo(video);
   const cached = await hasResult(video.videoId);
   if (cached) {
     const result = await getResult(video.videoId);

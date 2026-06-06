@@ -6,6 +6,7 @@ const chromeMock = {
     session: {
       get: vi.fn(),
       set: vi.fn(),
+      remove: vi.fn(),
     },
   },
   runtime: {
