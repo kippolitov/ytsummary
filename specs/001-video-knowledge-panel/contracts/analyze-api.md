@@ -9,14 +9,21 @@
 
 ## Authentication
 
-All requests MUST include the function-level API key:
+All requests MUST include the function-level API key as a URL query parameter:
 
 ```
-x-functions-key: <function-key>
+POST /api/analyze?code=<function-key>
 ```
 
-The key is injected at extension build time via `WXT_AZURE_FUNCTION_KEY` and is not
-user-visible. Requests without a valid key receive `401 Unauthorized`.
+The key is injected at extension build time via `WXT_AZURE_FUNCTION_KEY` and appended to the
+URL by `analysisClient.ts` before the request is made. Requests without a valid key receive
+`401 Unauthorized`.
+
+> **Why `?code=` and not `x-functions-key` header**: Azure Functions validates the function key
+> *before* applying CORS headers. Sending the key as a custom header causes the browser's CORS
+> preflight (OPTIONS) to receive a 401 with no `Access-Control-Allow-Origin` header, blocking
+> all requests from the extension. Passing the key as a URL parameter avoids this because the
+> OPTIONS preflight carries no body or custom headers.
 
 ---
 
@@ -27,7 +34,6 @@ user-visible. Requests without a valid key receive `401 Unauthorized`.
 | Header | Value | Required |
 |--------|-------|----------|
 | `Content-Type` | `application/json` | ✅ |
-| `x-functions-key` | Function API key | ✅ |
 
 ### Body
 
@@ -44,10 +50,16 @@ user-visible. Requests without a valid key receive `401 Unauthorized`.
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | `videoId` | string | ✅ | Matches `/^[a-zA-Z0-9_-]{11}$/` |
-| `title` | string | ✅ | Non-empty; max 500 chars |
-| `channelName` | string | ✅ | Non-empty; max 200 chars |
-| `transcript` | string | ✅ | Non-empty; max 200,000 chars (~90-min video) |
-| `durationSeconds` | number | ✅ | Positive integer |
+| `title` | string | ✅ | Max 500 chars; may be empty string |
+| `channelName` | string | ✅ | Max 200 chars; may be empty string |
+| `transcript` | string | ✅ | Max 200,000 chars (~90-min video); **may be empty string** — if empty, the function attempts server-side transcript fetching via the `youtube-transcript` package |
+| `durationSeconds` | number | ✅ | Non-negative integer (`>= 0`) |
+
+> **Transcript fallback**: When `transcript` is empty the server calls `transcriptFetcher.ts`
+> which uses YouTube's InnerTube API and HTML scraping. This fallback may be blocked when the
+> Azure Function's outbound IP is rate-limited by YouTube; in that case the function returns
+> `422 no-transcript`. The preferred path is for the client to send the transcript extracted
+> by `captionExtractor.content.ts`.
 
 ---
 
@@ -122,6 +134,7 @@ All error responses use this shape:
 | HTTP Status | `error.code` | Cause | Extension action |
 |-------------|-------------|-------|-----------------|
 | `400 Bad Request` | `invalid-request` | Missing or malformed required field | Show error; do not retry automatically |
+| `422 Unprocessable Entity` | `no-transcript` | Client sent empty transcript and server-side fetch also failed (video has no captions, or Azure IP blocked by YouTube) | Show "no captions available" message; do not retry automatically |
 | `422 Unprocessable Entity` | `transcript-too-long` | Transcript exceeds 200,000 chars | Show message: "Video is too long to analyze in v1" |
 | `429 Too Many Requests` | `rate-limited` | Azure OpenAI rate limit hit | Show error with "Try again in a moment"; retry after 10 s |
 | `500 Internal Server Error` | `service-error` | Azure OpenAI or function error | Show error with retry action |
@@ -136,11 +149,16 @@ The Azure Function MUST include these response headers for the extension origin:
 ```
 Access-Control-Allow-Origin: chrome-extension://<extensionId>
 Access-Control-Allow-Methods: POST, OPTIONS
-Access-Control-Allow-Headers: Content-Type, x-functions-key
+Access-Control-Allow-Headers: Content-Type
 ```
 
-In development, `Access-Control-Allow-Origin: *` is used. In production, the exact extension
-ID origin is specified in Azure Function App CORS settings.
+In development and production, `Access-Control-Allow-Origin: *` is acceptable (configured via
+`az functionapp cors add`). The extension origin `chrome-extension://<id>` can be added for
+stricter production hardening.
+
+> **Note**: `x-functions-key` is no longer listed in `Access-Control-Allow-Headers` because
+> the key is passed as `?code=` query parameter, not a header. Removing it from CORS headers
+> eliminates the preflight complexity that previously caused `401` errors.
 
 ---
 
