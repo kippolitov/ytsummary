@@ -52,27 +52,42 @@ cd ../functions && npm install
 
 ### 3. Start the Azure Function locally
 
+The project ships a lightweight local dev server (`functions/devServer.ts`) that wraps the
+function handler directly — no Azure Functions Core Tools CLI required.
+
 ```bash
 cd functions
-npm run start
-# Azure Functions Core Tools starts on http://localhost:7071
+npx tsx devServer.ts
+# HTTP server starts on http://localhost:7071
 ```
+
+Set `WXT_AZURE_FUNCTION_URL=http://localhost:7071/api/analyze` in `extension/.env.local` when
+testing locally, or point to the deployed Azure URL for production testing.
 
 ### 4. Build and load the extension in Chrome
 
 ```bash
 cd extension
-npm run dev
-# WXT builds to extension/.output/chrome-mv3-dev/
+npm run build
+# WXT builds to extension/.output/chrome-mv3/
 ```
 
 In Chrome:
 1. Navigate to `chrome://extensions`
 2. Enable **Developer mode**
-3. Click **Load unpacked** → select `extension/.output/chrome-mv3-dev/`
-4. Note the extension ID shown (e.g., `abcdefghijklmnopqrstuvwxyzabcdef`)
-5. Update `functions/local.settings.json` CORS to use `chrome-extension://<extensionId>` if
-   testing production CORS behaviour
+3. Click **Load unpacked**
+4. In the folder picker, press **Cmd + Shift + .** (macOS) to show hidden folders, then select
+   `extension/.output/chrome-mv3/`
+5. Note the extension ID shown — pin the extension to the toolbar for quick access
+
+> **Reloading after a rebuild**: after running `npm run build`, go to `chrome://extensions` and
+> click the **⟳** icon on the extension card to load the new output.
+
+### 5. Open the side panel
+
+Click the extension icon in the Chrome toolbar. The side panel opens automatically (this is
+configured via `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` in
+`background.ts`). Navigate to any YouTube video — the panel activates automatically.
 
 ---
 
@@ -82,11 +97,11 @@ In Chrome:
 
 **Goal**: Verify the knowledge panel appears with all sections for a video with captions.
 
-1. Navigate to any YouTube video that has captions (e.g., a recent conference talk or tutorial).
-2. **Expected within 3 s**: The side panel opens and a loading indicator is visible.
-3. **Expected within 30 s**: The panel displays all four sections — Summary, Topics, Steps (if
+1. Click the extension icon in the toolbar to open the side panel (it will persist across tabs).
+2. Navigate to any YouTube video that has captions (e.g., a recent conference talk or tutorial).
+3. **Expected within 3 s**: The side panel shows a loading indicator.
+4. **Expected within 30 s**: The panel displays all four sections — Summary, Topics, Steps (if
    applicable), References (if applicable).
-4. Click the extension icon if the panel does not open automatically.
 
 **Pass criteria**: Panel is fully populated; no raw error text visible; summary is 3–5 sentences.
 
@@ -189,8 +204,11 @@ QG-2). CI will fail the build if coverage drops below this threshold.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| Panel shows loading indefinitely | Azure Function not running or URL misconfigured | Check `WXT_AZURE_FUNCTION_URL` in `.env.local` |
-| `401 Unauthorized` in DevTools | Missing or wrong function key | Check `WXT_AZURE_FUNCTION_KEY` |
-| CORS error in DevTools console | Extension ID not in CORS allowlist | Add `chrome-extension://<id>` to `Host.CORS` in `local.settings.json` |
-| Panel does not open | Side panel not enabled in Chrome | Visit `chrome://extensions`, confirm extension is enabled |
-| "No captions available" on a captioned video | `ytInitialPlayerResponse` not yet set | Refresh the page; if persistent, check content script console errors |
+| Panel shows loading indefinitely | Azure Function not running or URL misconfigured | Check `WXT_AZURE_FUNCTION_URL` in `extension/.env.local`; ensure devServer or Azure Function is running |
+| `401 Unauthorized` in DevTools | Missing or wrong function key | Check `WXT_AZURE_FUNCTION_KEY` in `.env.local`; confirm key is passed as `?code=` param not a header |
+| CORS error in DevTools console | Extension origin not in Azure CORS allowlist | Run `az functionapp cors add --allowed-origins '*'`; verify `?code=` auth is used (custom headers trigger preflight auth failures) |
+| "Load unpacked" folder not visible | `.output` is a hidden folder on macOS | In the folder picker, press **Cmd + Shift + .** to show hidden folders |
+| Panel does not open on toolbar click | Side panel behaviour not registered | Reload the extension in `chrome://extensions`; `background.ts` calls `setPanelBehavior` on startup |
+| "The video could not be analyzed" on a captioned video | Transcript extraction failed | Open DevTools on the YouTube tab → Console → look for `[CaptionExtractor]` logs to diagnose which step failed |
+| `[CaptionExtractor] xml length: 0` in console | YouTube timedtext URL returns empty body | The `baseUrl` from `ytInitialPlayerResponse` may require specific request context; check the InnerTube fallback logs below it |
+| Extension changes not reflected after rebuild | Old build still loaded | Go to `chrome://extensions` → click **⟳** on the extension card |

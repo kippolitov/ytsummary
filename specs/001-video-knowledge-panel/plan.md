@@ -19,7 +19,7 @@ for instant reload within a session.
 
 **Primary Dependencies**:
 - Extension: WXT 0.19+, React 18, Tailwind CSS 3, Vite (via WXT)
-- Backend: Azure Functions v4 Node.js 20 runtime, `@azure/openai` SDK, `@azure/functions` SDK
+- Backend: Azure Functions v4 Node.js 20 runtime, `@azure/openai` SDK, `@azure/functions` SDK, `youtube-transcript` (server-side transcript fallback)
 
 **Storage**: `chrome.storage.session` (MV3 session-scoped cache, cleared on browser close); no
 persistent database in v1
@@ -40,10 +40,11 @@ Azure
 
 **Constraints**:
 - Chrome MV3 Content Security Policy restricts `eval` and remote code execution in extension pages
-- Azure Function API key stored in extension build-time environment variable (not user-visible)
-- YouTube timedtext API accessible from content script (same-origin); must handle no-captions case
+- Azure Function API key passed as `?code=` URL query parameter (not as `x-functions-key` header); using a custom header causes Azure to reject the CORS preflight before CORS headers are applied
+- Transcript extraction runs in a MAIN world content script (`captionExtractor.content.ts`) to access `window.ytInitialPlayerResponse`; isolated world content scripts cannot read page-level JS globals
+- The Azure Function falls back to server-side transcript fetching (`youtube-transcript` package) only when the client sends an empty transcript; Azure IP ranges may be blocked by YouTube for this fallback
 - Extension side panel memory ≤ 512 MB RSS (constitution QG-4)
-- CORS on Azure Function must allow the extension's origin (`chrome-extension://<id>`)
+- CORS on Azure Function must allow the extension's origin (`chrome-extension://<id>`); wildcard `*` is also acceptable
 
 **Scale/Scope**: Single-user extension (no multi-tenancy); one Azure Function endpoint; one
 AI model deployment; session cache only (no cross-session persistence in v1)
@@ -81,11 +82,12 @@ specs/001-video-knowledge-panel/
 ```text
 extension/                        # WXT browser extension
 ├── entrypoints/
-│   ├── background.ts             # MV3 service worker: routes messages, calls Azure Function
-│   ├── content.ts                # YouTube page content script: extracts videoId + transcript
+│   ├── background.ts             # MV3 service worker: routes messages, calls Azure Function; registers side panel action
+│   ├── captionExtractor.content.ts  # MAIN world content script: reads ytInitialPlayerResponse, fetches caption XML, posts transcript via window.postMessage
+│   ├── content.ts                # Isolated world content script: bridges window messages → chrome.runtime messages
 │   └── sidepanel/
 │       ├── index.html
-│       └── App.tsx               # React root: renders KnowledgePanel or loading/error state
+│       └── App.tsx               # React root: renders KnowledgePanel or loading/error state; persistent refresh toolbar
 ├── components/
 │   ├── KnowledgePanel/
 │   │   └── KnowledgePanel.tsx    # Top-level panel layout
@@ -98,8 +100,7 @@ extension/                        # WXT browser extension
 │       ├── LoadingIndicator.tsx
 │       └── ErrorMessage.tsx
 ├── services/
-│   ├── transcriptExtractor.ts    # Parses YouTube timedtext XML into plain text
-│   ├── analysisClient.ts         # Calls Azure Function endpoint
+│   ├── analysisClient.ts         # Calls Azure Function endpoint; passes API key as ?code= URL param
 │   └── sessionCache.ts           # chrome.storage.session read/write helpers
 ├── types/
 │   └── index.ts                  # Shared TypeScript interfaces (Video, KnowledgePanel, etc.)
@@ -116,10 +117,12 @@ functions/                        # Azure Functions app
 │   ├── models/
 │   │   └── index.ts              # Request/response TypeScript interfaces
 │   └── services/
-│       └── openaiOrchestrator.ts # Builds prompt, calls Azure OpenAI, parses response
+│       ├── openaiOrchestrator.ts # Builds prompt, calls Azure OpenAI, parses response
+│       └── transcriptFetcher.ts  # Server-side transcript fallback using youtube-transcript package
 ├── tests/
 │   ├── unit/
 │   └── integration/              # Uses msw to record/replay OpenAI HTTP responses
+├── devServer.ts                  # Local dev HTTP server (replaces func CLI); loads local.settings.json
 ├── host.json
 └── package.json
 ```
