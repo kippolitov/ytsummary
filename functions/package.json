@@ -11,7 +11,7 @@
     "test:integration": "vitest run --reporter=verbose tests/integration",
     "coverage": "vitest run --coverage"
   },
-  "main": "dist/src/analyze/index.js",
+  "main": "dist/src/index.js",
   "dependencies": {
     "@azure/functions": "^4.3.0",
     "@azure/openai": "^1.0.0-beta.12",
