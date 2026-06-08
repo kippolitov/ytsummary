@@ -4,6 +4,7 @@ module.exports = {
     "./entrypoints/**/*.{ts,tsx,html}",
     "./components/**/*.{ts,tsx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       maxWidth: {
