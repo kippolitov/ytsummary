@@ -109,8 +109,8 @@ jobs:
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
           # Mask the password so it never appears in logs
           echo "::add-mask::$PASSWORD"
-          # Wrap WXT zip output in a password-protected AES-256 archive
-          7za a -p"$PASSWORD" -mhe=on "extension-${{ github.sha }}.zip" extension/.output/*.zip
+          # Wrap WXT zip output in a password-protected AES-256 archive (.7z supports header encryption)
+          7za a -p"$PASSWORD" -mhe=on "extension-${{ github.sha }}.7z" extension/.output/*.zip
           # Store the password back to GitHub Secrets (overwrites previous value)
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
 
@@ -118,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ github.sha }}
-          path: extension-${{ github.sha }}.zip
+          path: extension-${{ github.sha }}.7z
           retention-days: 30
 
   # ── Azure Functions deployment ────────────────────────────────────────────
@@ -143,9 +143,13 @@ jobs:
         run: npm run build
         working-directory: functions
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Functions
         uses: azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           package: functions/
