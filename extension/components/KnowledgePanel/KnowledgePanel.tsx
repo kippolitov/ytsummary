@@ -12,16 +12,16 @@ interface KnowledgePanelProps {
 
 export function KnowledgePanel({ result, videoTitle, channelName }: KnowledgePanelProps) {
   return (
-    <div className="flex flex-col gap-3 p-3">
+    <div className="flex flex-col gap-2.5 p-3">
       {(videoTitle || channelName) && (
-        <header className="border-b border-gray-100 pb-2">
+        <header className="rounded-xl border border-gray-200/80 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
           {videoTitle && (
-            <h1 className="line-clamp-2 text-sm font-semibold text-gray-900">
+            <h1 className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
               {videoTitle}
             </h1>
           )}
           {channelName && (
-            <p className="mt-0.5 text-xs text-gray-500">{channelName}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{channelName}</p>
           )}
         </header>
       )}
