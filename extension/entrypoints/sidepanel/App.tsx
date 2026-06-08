@@ -217,7 +217,7 @@ export function App() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">No captions available</p>
                   <p className="mt-1 text-sm text-amber-700 dark:text-amber-500">
-                    This video doesn't have captions. Try a video with captions enabled.
+                    This video doesn&apos;t have captions. Try a video with captions enabled.
                   </p>
                 </div>
               </div>

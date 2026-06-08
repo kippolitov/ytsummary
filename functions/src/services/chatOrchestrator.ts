@@ -40,10 +40,10 @@ export async function* streamChatResponse(req: ChatRequest): AsyncGenerator<stri
       ? buildBlogPostSystemPrompt(req.videoTitle, req.transcript)
       : buildChatSystemPrompt(req.videoTitle, req.transcript);
 
-  const conversationMessages =
+  const conversationMessages: Array<{ role: "user" | "assistant"; content: string }> =
     mode === "blog-post"
-      ? ([{ role: "user" as const, content: "Generate a blog post about this video." }])
-      : req.messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+      ? [{ role: "user", content: "Generate a blog post about this video." }]
+      : req.messages.map((m) => ({ role: m.role, content: m.content }));
 
   const stream = await client.chat.completions.create({
     model: deployment,
