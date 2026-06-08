@@ -1,0 +1,151 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+# Serialize main-branch deployments; never cancel an in-progress deploy.
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ── CI gate (mirrors ci.yml) ──────────────────────────────────────────────
+  extension-ci:
+    name: Extension CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: extension
+
+      - name: Lint
+        run: npm run lint
+        working-directory: extension
+
+      - name: Unit tests
+        run: npm test
+        working-directory: extension
+
+      - name: Build
+        run: npm run build
+        working-directory: extension
+
+  functions-ci:
+    name: Functions CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Lint
+        run: npm run lint
+        working-directory: functions
+
+      - name: Unit tests
+        run: npm test
+        working-directory: functions
+
+      - name: Build
+        run: npm run build
+        working-directory: functions
+
+  # ── Extension packaging ───────────────────────────────────────────────────
+  package-extension:
+    name: Package Extension
+    runs-on: ubuntu-latest
+    needs: [extension-ci]
+    # secrets:write is not available on GITHUB_TOKEN; gh secret set uses GH_PAT.
+    # GH_PAT must be a fine-grained or classic PAT with repo > secrets write scope.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: extension
+
+      - name: Build extension
+        run: npm run build
+        working-directory: extension
+
+      - name: Zip extension (WXT)
+        run: npm run zip
+        working-directory: extension
+
+      - name: Generate password, create protected archive, and store secret
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          # Generate 8-character alphanumeric password
+          PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
+          # Mask the password so it never appears in logs
+          echo "::add-mask::$PASSWORD"
+          # Wrap WXT zip output in a password-protected AES-256 archive
+          7za a -p"$PASSWORD" -mhe=on "extension-${{ github.sha }}.zip" extension/.output/*.zip
+          # Store the password back to GitHub Secrets (overwrites previous value)
+          gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-${{ github.sha }}
+          path: extension-${{ github.sha }}.zip
+          retention-days: 30
+
+  # ── Azure Functions deployment ────────────────────────────────────────────
+  deploy-functions:
+    name: Deploy Functions
+    runs-on: ubuntu-latest
+    needs: [functions-ci]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Build TypeScript
+        run: npm run build
+        working-directory: functions
+
+      - name: Deploy to Azure Functions
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          package: functions/

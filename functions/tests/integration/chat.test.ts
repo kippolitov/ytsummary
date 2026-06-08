@@ -8,7 +8,7 @@ vi.mock("../../src/services/chatOrchestrator", () => ({
 import { chatHandler } from "../../src/chat/index";
 import { streamChatResponse } from "../../src/services/chatOrchestrator";
 
-async function* fixtureStream(chunks: string[]): AsyncGenerator<string> {
+function* fixtureStream(chunks: string[]): Generator<string> {
   for (const chunk of chunks) {
     yield chunk;
   }
@@ -19,12 +19,12 @@ function makeRequest(body: unknown, method = "POST"): HttpRequest {
     method,
     url: "http://localhost:7071/api/chat",
     headers: new Headers({ "Content-Type": "application/json" }),
-    json: async () => body,
-    text: async () => JSON.stringify(body),
+    json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
     body: null,
-    arrayBuffer: async () => new ArrayBuffer(0),
-    formData: async () => new FormData(),
-    blob: async () => new Blob(),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    formData: () => Promise.resolve(new FormData()),
+    blob: () => Promise.resolve(new Blob()),
   } as unknown as HttpRequest;
 }
 
@@ -92,6 +92,7 @@ describe("POST /api/chat — integration", () => {
 
   it("returns 200 with a stream body even when orchestrator throws (error is in-stream)", async () => {
     (streamChatResponse as ReturnType<typeof vi.fn>).mockImplementation(function* () {
+      yield "";
       throw new Error("OpenAI error");
     });
 
