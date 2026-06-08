@@ -28,12 +28,12 @@ function makeRequest(body: unknown, method = "POST"): HttpRequest {
     method,
     url: "http://localhost:7071/api/analyze",
     headers: new Headers({ "Content-Type": "application/json" }),
-    json: async () => body,
-    text: async () => JSON.stringify(body),
+    json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body)),
     body: null,
-    arrayBuffer: async () => new ArrayBuffer(0),
-    formData: async () => new FormData(),
-    blob: async () => new Blob(),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    formData: () => Promise.resolve(new FormData()),
+    blob: () => Promise.resolve(new Blob()),
   } as unknown as HttpRequest;
 }
 
