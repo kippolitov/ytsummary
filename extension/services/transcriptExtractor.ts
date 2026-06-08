@@ -23,10 +23,11 @@ export async function extractTranscript(): Promise<string | null> {
     playerResponse.captions?.playerCaptionsTracklistRenderer?.captionTracks;
   if (!tracks || tracks.length === 0) return null;
 
-  const baseUrl = tracks[0].baseUrl;
+  const url = new URL(tracks[0].baseUrl);
+  url.searchParams.set("fmt", "srv1");
 
   try {
-    const response = await fetch(baseUrl);
+    const response = await fetch(url.toString());
     if (!response.ok) return null;
 
     const xml = await response.text();

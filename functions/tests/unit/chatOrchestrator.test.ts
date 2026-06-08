@@ -41,10 +41,12 @@ describe("chatOrchestrator — streamChatResponse", () => {
       [Symbol.asyncIterator]: () => {
         let i = 0;
         return {
-          next: async () =>
-            i < chunks.length
-              ? { value: chunks[i++], done: false }
-              : { value: undefined, done: true },
+          next: () =>
+            Promise.resolve(
+              i < chunks.length
+                ? { value: chunks[i++], done: false }
+                : { value: undefined, done: true }
+            ),
         };
       },
     };
@@ -61,7 +63,7 @@ describe("chatOrchestrator — streamChatResponse", () => {
   });
 
   it("uses conversation history messages for chat mode", async () => {
-    const mockStream = { [Symbol.asyncIterator]: () => ({ next: async () => ({ value: undefined, done: true }) }) };
+    const mockStream = { [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ value: undefined, done: true }) }) };
     const client = new AzureOpenAI({ endpoint: "", apiKey: "", deployment: "gpt-4o-mini", apiVersion: "2024-02-01" });
     (client.chat.completions.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockStream);
 
@@ -77,6 +79,7 @@ describe("chatOrchestrator — streamChatResponse", () => {
     const gen = streamChatResponse(requestWithHistory);
     for await (const _ of gen) { /* drain */ }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const call = (client.chat.completions.create as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
       messages: Array<{ role: string; content: string }>;
     };
@@ -85,7 +88,7 @@ describe("chatOrchestrator — streamChatResponse", () => {
   });
 
   it("uses blog-post system prompt and excludes conversation history for blog-post mode", async () => {
-    const mockStream = { [Symbol.asyncIterator]: () => ({ next: async () => ({ value: undefined, done: true }) }) };
+    const mockStream = { [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ value: undefined, done: true }) }) };
     const client = new AzureOpenAI({ endpoint: "", apiKey: "", deployment: "gpt-4o-mini", apiVersion: "2024-02-01" });
     (client.chat.completions.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockStream);
 
@@ -102,6 +105,7 @@ describe("chatOrchestrator — streamChatResponse", () => {
     const gen = streamChatResponse(blogRequest);
     for await (const _ of gen) { /* drain */ }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const call = (client.chat.completions.create as ReturnType<typeof vi.fn>).mock.calls[0]![0] as {
       messages: Array<{ role: string; content: string }>;
     };
@@ -120,10 +124,12 @@ describe("chatOrchestrator — streamChatResponse", () => {
       [Symbol.asyncIterator]: () => {
         let i = 0;
         return {
-          next: async () =>
-            i < chunks.length
-              ? { value: chunks[i++], done: false }
-              : { value: undefined, done: true },
+          next: () =>
+            Promise.resolve(
+              i < chunks.length
+                ? { value: chunks[i++], done: false }
+                : { value: undefined, done: true }
+            ),
         };
       },
     };

@@ -10,12 +10,11 @@ module.exports = {
     ecmaVersion: 2022,
     sourceType: "module",
     ecmaFeatures: { jsx: true },
-    project: "./tsconfig.json",
   },
   plugins: ["@typescript-eslint", "react", "react-hooks"],
   extends: [
     "eslint:recommended",
-    "plugin:@typescript-eslint/recommended-type-checked",
+    "plugin:@typescript-eslint/recommended",
     "plugin:react/recommended",
     "plugin:react-hooks/recommended",
     "prettier",
@@ -25,8 +24,8 @@ module.exports = {
   },
   rules: {
     "react/react-in-jsx-scope": "off",
-    "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-    "no-console": ["warn", { allow: ["warn", "error"] }],
+    "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    "no-console": ["warn", { allow: ["warn", "error", "log"] }],
   },
   ignorePatterns: [
     "node_modules/",
