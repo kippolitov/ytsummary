@@ -104,22 +104,23 @@ Create `.github/workflows/cd.yml`:
   1. `extension-ci` — same steps as Phase A's extension job
   2. `functions-ci` — same steps as Phase A's functions job
   3. `package-extension` — depends on `extension-ci`:
-     - `npm ci` + `npm run build` in `extension/`
-     - `npm run zip` (produces `extension/.output/*.zip` via WXT)
+     - `npm ci` + `npm run build` + `npm run zip` in `extension/` (WXT produces `extension/.output/*.zip`)
      - Generate password: `openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8`
      - Mask password: `echo "::add-mask::$PASSWORD"`
-     - Create password-protected archive: `zip --password "$PASSWORD" extension-$GITHUB_SHA.zip <wxt-zip-output>`
-     - Update GitHub Secret: `gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD"` (using `GITHUB_TOKEN` with `secrets: write` permission)
-     - Upload artifact: `actions/upload-artifact@v4` with name `extension-${{ github.sha }}`
+     - Create password-protected archive: `7za a -p"$PASSWORD" -mhe=on extension-$GITHUB_SHA.7z extension/.output/*.zip` (AES-256 + header encryption)
+     - Update GitHub Secret: `gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD"` via `env: GH_TOKEN: ${{ secrets.GH_PAT }}` (`GITHUB_TOKEN` cannot write secrets — a fine-grained PAT is required)
+     - Upload artifact: `actions/upload-artifact@v4` with name `extension-${{ github.sha }}`, path `extension-${{ github.sha }}.7z`
   4. `deploy-functions` — depends on `functions-ci`:
-     - `npm ci` + `npm run build:production` in `functions/`
-     - `azure/functions-action@v1` with `app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}` and `publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}`
+     - `npm ci` + `npm run build` in `functions/`
+     - `azure/login@v2` with OIDC federated identity: `client-id: ${{ secrets.AZURE_CLIENT_ID }}`, `tenant-id: ${{ secrets.AZURE_TENANT_ID }}`, `subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}`
+     - `azure/functions-action@v1` with `app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}` and `package: functions/`
 
 ### Phase C: Permissions and Workflow Settings
 
-- Grant `GITHUB_TOKEN` the `secrets: write` permission in `cd.yml` (needed for `gh secret set`)
 - Set `permissions: contents: read` for CI workflow (least privilege)
-- Add `concurrency` group per branch to cancel stale runs (optional but recommended)
+- Set `permissions: contents: read` for `package-extension` job; use `GH_PAT` env var for secret writes (GITHUB_TOKEN cannot write repository secrets)
+- Set `permissions: contents: read, id-token: write` for `deploy-functions` job (required for OIDC federated login to Azure)
+- Add `concurrency` group per branch to cancel stale CI runs; serialize CD runs with `cancel-in-progress: false`
 
 ### Phase D: Validation
 

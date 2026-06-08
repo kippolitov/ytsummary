@@ -21,9 +21,13 @@ Before the CD pipeline can succeed, configure these secrets under **Settings →
 
 | Secret | How to get the value |
 |---|---|
-| `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` | Azure Portal → Function App → **Get Publish Profile** (downloads an XML file; paste its full contents) |
+| `AZURE_CLIENT_ID` | Azure Portal → App registrations → your service principal → **Application (client) ID** |
+| `AZURE_TENANT_ID` | Azure Portal → Azure Active Directory → **Directory (tenant) ID** |
+| `AZURE_SUBSCRIPTION_ID` | Azure Portal → Subscriptions → your subscription → **Subscription ID** |
 | `AZURE_FUNCTIONAPP_NAME` | The name of your Azure Function App (e.g., `ytsummary-functions`) |
-| `GH_PAT` | A GitHub Personal Access Token with `repo` scope (needed so the pipeline can call `gh secret set` to store the extension zip password — `GITHUB_TOKEN` cannot write secrets). Create at **Settings → Developer settings → Personal access tokens → Fine-grained tokens**, grant **Secrets → Read and write** for this repository. |
+| `GH_PAT` | A GitHub Personal Access Token (fine-grained) with **Secrets → Read and write** for this repository. Create at **Settings → Developer settings → Personal access tokens → Fine-grained tokens**. `GITHUB_TOKEN` cannot write secrets — this PAT is required. |
+
+The `deploy-functions` job uses OIDC federated identity (`azure/login@v2`) — no publish profile is needed. Ensure the Azure service principal has the **Contributor** role on the Function App and that the GitHub Actions federated credential is configured on the app registration.
 
 `EXTENSION_ZIP_PASSWORD` is managed automatically by the pipeline — do not create it manually.
 
@@ -84,7 +88,7 @@ Before the CD pipeline can succeed, configure these secrets under **Settings →
 **Expected outcome**:
 - Four jobs appear: `extension-ci`, `functions-ci`, `package-extension`, `deploy-functions`.
 - All four jobs complete successfully.
-- Under **Artifacts**, an artifact named `extension-<SHA>` is present.
+- Under **Artifacts**, an artifact named `extension-<SHA>` is present (containing a `.7z` file).
 - In GitHub Secrets (`Settings → Secrets → EXTENSION_ZIP_PASSWORD`), the secret now has an updated "last modified" timestamp.
 - The Azure Functions app reflects the deployed code (verify via Azure Portal or by calling a known endpoint).
 
@@ -92,22 +96,22 @@ Before the CD pipeline can succeed, configure these secrets under **Settings →
 
 ## Validation Scenario 4: Artifact Extraction
 
-**Goal**: Confirm the packaged extension .zip is password-protected and extractable with the correct password.
+**Goal**: Confirm the packaged extension archive is password-protected and extractable with the correct password.
 
 **Steps**:
 
-1. After Scenario 3 completes, download the `extension-<SHA>` artifact from the **Actions** run.
-2. Attempt to unzip without a password:
+1. After Scenario 3 completes, download the `extension-<SHA>` artifact from the **Actions** run. It contains a single `extension-<SHA>.7z` file.
+2. Attempt to extract without a password:
    ```
-   unzip extension-<SHA>.zip
+   7z x extension-<SHA>.7z
    ```
-   **Expected**: Extraction fails with a "password required" error.
-3. Retrieve the password from **Settings → Secrets → EXTENSION_ZIP_PASSWORD** (requires admin access to copy the value — use `gh secret list` or the GitHub API if needed, noting that secrets cannot be read back through the UI but can be used in scripts).
+   **Expected**: Extraction fails with a "Wrong password" or "encrypted" error (the `.7z` uses `-mhe=on` which also encrypts the file listing).
+3. Retrieve the password from **Settings → Secrets → EXTENSION_ZIP_PASSWORD** (requires admin access — GitHub does not show the value in the UI; use the GitHub API with a PAT or retrieve it programmatically in a controlled environment).
 4. Extract with the password:
    ```
-   unzip -P <retrieved-password> extension-<SHA>.zip
+   7z x -p<retrieved-password> extension-<SHA>.7z
    ```
-   **Expected**: Archive extracts successfully and contains the built extension files.
+   **Expected**: Archive extracts successfully and contains the WXT-produced extension `.zip`.
 
 > **Note on secret retrieval**: GitHub does not expose secret values in the UI after creation. To retrieve the password, use the `gh` CLI:
 > ```

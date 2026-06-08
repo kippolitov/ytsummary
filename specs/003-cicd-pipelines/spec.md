@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-08
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "As a developer on the YoutubeSummarizer project, I want automated CI/CD pipelines for both the browser extension and the Azure Functions backend so that every push to a feature branch runs linting, unit tests, and a build to catch regressions early, while merges to the main branch additionally package the extension as a password-protected .zip — using a random 8-character alphanumeric password generated at build time and stored as a GitHub Actions secret, never committed to the repository — and deploy the Functions app to Azure using credentials and API keys also held exclusively in GitHub secrets, giving the team confidence that what's in main is always releasable without exposing sensitive values in source control."
 

@@ -215,16 +215,45 @@ In Chrome:
 
 ---
 
+## CI/CD Pipelines
+
+GitHub Actions workflows run automatically on every push:
+
+| Trigger | What runs |
+|---|---|
+| Push to any branch (except `main`) | Lint + unit tests + build for both `extension/` and `functions/` (parallel) |
+| Push to `main` (PR merge) | Same CI checks, then packages the extension as a password-protected `.7z` artifact and deploys the Functions app to Azure |
+
+### Required GitHub Secrets
+
+Before the CD pipeline can succeed, configure these secrets in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|---|---|
+| `AZURE_CLIENT_ID` | Azure app registration client ID (for OIDC login) |
+| `AZURE_TENANT_ID` | Azure tenant ID (for OIDC login) |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID (for OIDC login) |
+| `AZURE_FUNCTIONAPP_NAME` | Name of the Azure Function App to deploy to |
+| `GH_PAT` | Fine-grained Personal Access Token with **Secrets → Read and write** for this repository (needed to store the extension zip password) |
+
+`EXTENSION_ZIP_PASSWORD` is written automatically by the CD pipeline after each main merge — do not create it manually.
+
+See [specs/003-cicd-pipelines/quickstart.md](specs/003-cicd-pipelines/quickstart.md) for validation scenarios and setup instructions.
+
+---
+
 ## Deploying to Azure
 
-Build and package the functions:
+The CD pipeline deploys automatically on every merge to `main` using OIDC federated identity — no publish profile or long-lived credentials are stored.
+
+To deploy manually, build and package the functions:
 
 ```sh
 cd functions
 npm run build:production   # compiles TypeScript and creates func-deploy.zip
 ```
 
-Deploy via Azure CLI or the Azure Portal. Set these application settings on the Function App:
+Then deploy via Azure CLI or the Azure Portal. Set these application settings on the Function App:
 
 | Setting | Value |
 |---|---|
@@ -247,6 +276,11 @@ Rebuild the extension (`npm run build`) and reload it in Chrome.
 
 ```
 ytsummary/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Feature branch CI: lint + test + build
+│       └── cd.yml              # Main branch CD: CI + package extension + deploy functions
+│
 ├── extension/                  # Chrome extension (WXT + React + Tailwind)
 │   ├── components/
 │   │   ├── Chat/               # Chat tab UI (ChatPanel, ChatInput, bubbles)

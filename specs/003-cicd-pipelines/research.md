@@ -22,10 +22,11 @@
 
 ## 3. Extension Packaging Format
 
-**Decision**: Use the `wxt zip` command (already in the extension's `package.json` `scripts`) to produce the extension bundle, then apply password protection using `zip` with AES-256 encryption at the shell level.  
-**Rationale**: `wxt zip` already produces a correctly structured extension archive. Wrapping it in a password-protected outer .zip (via the `zip -e` / `zip --password` flag or `7z a -p`) adds the security layer without modifying the WXT build process.  
+**Decision**: Use `npm run zip` (`wxt zip`) to produce the extension bundle, then wrap it in a password-protected `.7z` archive using `7za a -p"$PASSWORD" -mhe=on` (AES-256 with header encryption).  
+**Rationale**: `wxt zip` already produces a correctly structured extension archive. Using `7za` with `-mhe=on` encrypts both file contents and the archive's file listing, preventing even metadata leakage. The `zip --password` flag does not encrypt the central directory, so `.7z` is the stronger choice.  
 **Alternatives considered**:
-- Custom packaging script — unnecessary complexity; `wxt zip` is already correct.
+- `zip --password` — weaker (central directory unencrypted); replaced by `7za`.
+- Custom packaging script — unnecessary complexity; `wxt zip` + `7za` is sufficient.
 - PGP encryption — team workflow requires a password, not a key pair.
 
 ---
@@ -43,11 +44,11 @@
 
 ## 5. Azure Functions Deployment Method
 
-**Decision**: Use the Azure Functions GitHub Actions action (`azure/functions-action`) with a publish profile stored as a GitHub Secret (`AZURE_FUNCTIONAPP_PUBLISH_PROFILE`).  
-**Rationale**: The publish profile approach is well-documented, scoped to a single Function App (least-privilege), and does not require creating a service principal or managing RBAC. It works with the existing `npm run build:production` script in `functions/package.json` which calls `func pack`.  
+**Decision**: Use `azure/login@v2` with OIDC federated identity (workload identity federation), then deploy via `azure/functions-action@v1`.  
+**Rationale**: OIDC eliminates long-lived credentials — no publish profile XML needs to be stored as a secret. The three secrets required (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) are non-sensitive identifiers; the actual authentication token is short-lived and issued by GitHub Actions at runtime. The `id-token: write` permission on the job enables this flow. The job runs `npm run build` (TypeScript compilation) before deploying the `functions/` directory.  
 **Alternatives considered**:
-- Service principal / federated identity (OIDC) — more powerful and reusable but adds AAD configuration overhead for this single-app scenario.
-- Azure CLI in a generic step — more verbose, same security posture as publish profile.
+- Publish profile — stores a long-lived credential XML as a secret; replaced by OIDC.
+- Azure CLI in a generic step — more verbose; `azure/functions-action` handles the deployment packaging automatically.
 
 ---
 
@@ -55,10 +56,12 @@
 
 | Secret Name | Purpose | Who Sets It |
 |---|---|---|
-| `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` | Deploy Functions to Azure | Repo admin (from Azure Portal) |
+| `AZURE_CLIENT_ID` | OIDC login — Azure app registration client ID | Repo admin |
+| `AZURE_TENANT_ID` | OIDC login — Azure tenant ID | Repo admin |
+| `AZURE_SUBSCRIPTION_ID` | OIDC login — Azure subscription ID | Repo admin |
 | `AZURE_FUNCTIONAPP_NAME` | Target Function App name | Repo admin |
-| `EXTENSION_ZIP_PASSWORD` | Password for extension .zip (overwritten each main merge) | Set by CD pipeline automatically |
-| `OPENAI_API_KEY` | Functions runtime API key (if needed for integration tests) | Repo admin |
+| `GH_PAT` | Fine-grained PAT (secrets write) — used by `gh secret set` to store `EXTENSION_ZIP_PASSWORD` | Repo admin |
+| `EXTENSION_ZIP_PASSWORD` | Password for extension `.7z` archive (overwritten each main merge) | Set by CD pipeline automatically |
 
 ---
 
