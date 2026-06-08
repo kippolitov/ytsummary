@@ -25,5 +25,6 @@ module.exports = {
     "dist/",
     "*.config.ts",
     "*.config.cjs",
+    "devServer.ts",
   ],
 };

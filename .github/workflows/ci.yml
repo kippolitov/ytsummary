@@ -32,6 +32,8 @@ jobs:
       - name: Lint
         run: npm run lint
         working-directory: extension
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Unit tests
         run: npm test
