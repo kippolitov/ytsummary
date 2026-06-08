@@ -54,6 +54,8 @@ Triggered by pushes to `main` (i.e., after a PR merge).
 | Trigger | `push` to `main` |
 | Jobs | `extension-ci`, `functions-ci` (parallel), then `package-extension`, `deploy-functions` (parallel, depend on CI jobs) |
 | Failure behaviour | CI job failure prevents downstream jobs from running |
+| Concurrency | `cd-main` group; `cancel-in-progress: false` (deployments are never cancelled mid-run) |
+| `deploy-functions` permissions | `contents: read`, `id-token: write` (required for OIDC federated login to Azure) |
 
 **Job: `package-extension`** (depends on `extension-ci`)
 
@@ -61,19 +63,20 @@ Triggered by pushes to `main` (i.e., after a PR merge).
 |---|---|---|
 | Install dependencies | `npm ci` in `extension/` | — |
 | Build extension | `npm run build` | — |
-| Zip extension | `wxt zip` in `extension/` | — |
+| Zip extension | `npm run zip` in `extension/` (WXT) | — |
 | Generate password | `openssl rand` piped through `tr`; mask via `::add-mask::` | — |
-| Create password-protected archive | `zip --password $PASSWORD` wrapping wxt output | — |
-| Store password | `gh secret set EXTENSION_ZIP_PASSWORD` | `GITHUB_TOKEN` (write:secrets) |
-| Upload artifact | `actions/upload-artifact` | — |
+| Create password-protected archive | `7za a -p"$PASSWORD" -mhe=on` (AES-256, header encryption) | — |
+| Store password | `gh secret set EXTENSION_ZIP_PASSWORD` via `GH_TOKEN: ${{ secrets.GH_PAT }}` | `GH_PAT` (fine-grained PAT with secrets write) |
+| Upload artifact | `actions/upload-artifact@v4` | — |
 
 **Job: `deploy-functions`** (depends on `functions-ci`)
 
 | Step | Action | Secret access |
 |---|---|---|
 | Install dependencies | `npm ci` in `functions/` | — |
-| Build for production | `npm run build:production` | — |
-| Deploy to Azure | `azure/functions-action` | `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`, `AZURE_FUNCTIONAPP_NAME` |
+| Build TypeScript | `npm run build` | — |
+| Login to Azure | `azure/login@v2` (OIDC federated identity) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` |
+| Deploy to Azure | `azure/functions-action@v1` | `AZURE_FUNCTIONAPP_NAME` |
 
 ---
 
@@ -81,10 +84,12 @@ Triggered by pushes to `main` (i.e., after a PR merge).
 
 | Name | Type | Set By | Used By |
 |---|---|---|---|
-| `AZURE_FUNCTIONAPP_PUBLISH_PROFILE` | Azure publish profile XML | Repo admin (one-time setup) | `deploy-functions` job |
+| `AZURE_CLIENT_ID` | Azure app registration client ID | Repo admin (one-time setup) | `deploy-functions` job (OIDC login) |
+| `AZURE_TENANT_ID` | Azure tenant ID | Repo admin (one-time setup) | `deploy-functions` job (OIDC login) |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | Repo admin (one-time setup) | `deploy-functions` job (OIDC login) |
 | `AZURE_FUNCTIONAPP_NAME` | String (app name) | Repo admin (one-time setup) | `deploy-functions` job |
+| `GH_PAT` | Fine-grained PAT with secrets write scope | Repo admin (one-time setup) | `package-extension` job (to update `EXTENSION_ZIP_PASSWORD`) |
 | `EXTENSION_ZIP_PASSWORD` | 8-char alphanumeric string | `package-extension` job (auto-overwritten) | Team members (manual retrieval) |
-| `GITHUB_TOKEN` | Auto-provided by GitHub Actions | GitHub (automatic) | `package-extension` job (to update secrets) |
 
 ---
 
@@ -92,9 +97,10 @@ Triggered by pushes to `main` (i.e., after a PR merge).
 
 | Attribute | Value |
 |---|---|
-| Artifact name | `extension-<GITHUB_SHA>.zip` |
-| Contents | Password-protected .zip of built extension |
-| Retention | 30 days (GitHub default) |
+| Artifact name | `extension-<GITHUB_SHA>` (GitHub Actions artifact) |
+| Archive file | `extension-<GITHUB_SHA>.7z` (AES-256 with header encryption) |
+| Contents | Password-protected `.7z` wrapping the WXT-produced `.zip` |
+| Retention | 30 days (GitHub Actions default) |
 | Access | Any user with read access to the repository |
 
 ---
