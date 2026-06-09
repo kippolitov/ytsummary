@@ -1,4 +1,11 @@
 import { defineConfig } from "wxt";
+import { config as loadDotenv } from "dotenv";
+
+// Load .env.local with override:true so file values always win over any
+// stale shell exports (dotenv's default is no-override, which causes the
+// Vite define to receive "" when the var is exported-but-empty in the shell).
+loadDotenv({ path: ".env.local", override: true });
+loadDotenv({ path: ".env", override: false });
 
 export default defineConfig({
   extensionApi: "chrome",
