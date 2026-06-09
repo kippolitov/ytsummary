@@ -97,5 +97,5 @@ app.http("chat-preflight", {
   methods: ["OPTIONS"],
   authLevel: "anonymous",
   route: "chat",
-  handler: async () => ({ status: 204, headers: corsHeaders() }),
+  handler: () => ({ status: 204, headers: corsHeaders() }),
 });
