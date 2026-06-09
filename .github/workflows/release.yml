@@ -81,6 +81,14 @@ jobs:
         run: npm run build
         working-directory: extension
 
+      - name: Verify URL baked into built extension
+        run: |
+          if grep -q 'not configured' extension/.output/chrome-mv3/background.js; then
+            echo "ERROR: URL guard still present in built output — WXT_AZURE_FUNCTION_URL was empty during build"
+            exit 1
+          fi
+          echo "OK: URL guard eliminated by dead-code removal (URL was set correctly)"
+
       - name: Zip extension
         run: npm run zip
         working-directory: extension
