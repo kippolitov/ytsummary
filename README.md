@@ -215,6 +215,40 @@ In Chrome:
 
 ---
 
+## Release Process
+
+To publish a new versioned release of the extension:
+
+1. **Bump the version** in [extension/package.json](extension/package.json):
+   ```json
+   { "version": "0.1.0" }
+   ```
+
+2. **Commit and push** the version bump (directly or via PR to `main`):
+   ```sh
+   git add extension/package.json
+   git commit -m "chore: bump version to 0.1.0"
+   git push origin main
+   ```
+
+3. **Create and push a matching version tag**:
+   ```sh
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+4. **The `Release` workflow fires automatically** on tag push and:
+   - Validates that the tag version matches `extension/package.json`
+   - Rejects duplicate releases (same tag cannot be released twice)
+   - Runs lint, unit tests, and build as a CI gate
+   - Packages the extension as a password-protected `ytsummary-v0.1.0.7z` archive
+   - Stores the archive password in the `EXTENSION_ZIP_PASSWORD` repository secret
+   - Creates a GitHub Release tagged `v0.1.0` with the archive as the sole downloadable asset
+
+The archive password is rotated on every release and shared with authorized users out-of-band (e.g., Slack or email). It is never stored in the repository, release notes, or pipeline logs.
+
+---
+
 ## CI/CD Pipelines
 
 GitHub Actions workflows run automatically on every push:
@@ -223,6 +257,7 @@ GitHub Actions workflows run automatically on every push:
 |---|---|
 | Push to any branch (except `main`) | Lint + unit tests + build for both `extension/` and `functions/` (parallel) |
 | Push to `main` (PR merge) | Same CI checks, then packages the extension as a password-protected `.7z` artifact and deploys the Functions app to Azure |
+| Push of `v*.*.*` tag | Version validation, CI gate, password-protected archive, GitHub Release creation |
 
 ### Required GitHub Secrets
 
@@ -279,7 +314,8 @@ ytsummary/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml              # Feature branch CI: lint + test + build
-│       └── cd.yml              # Main branch CD: CI + package extension + deploy functions
+│       ├── cd.yml              # Main branch CD: CI + package extension + deploy functions
+│       └── release.yml         # Tag-triggered release: version validation + GitHub Release
 │
 ├── extension/                  # Chrome extension (WXT + React + Tailwind)
 │   ├── components/
