@@ -7,6 +7,10 @@ export async function analyzeHandler(
   request: HttpRequest,
   context: InvocationContext
 ): Promise<HttpResponseInit> {
+  if (request.method === "OPTIONS") {
+    return { status: 204, headers: corsHeaders() };
+  }
+
   context.log("analyze function triggered");
 
   let body: unknown;

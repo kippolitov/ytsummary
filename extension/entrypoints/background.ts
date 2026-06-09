@@ -53,6 +53,7 @@ async function handleTranscriptReady(video: Video): Promise<void> {
     };
     broadcastToSidePanel(msg);
   } catch (err) {
+    console.error("[background] postAnalysis failed:", err);
     const panelError = mapToAnalysisError(err);
     if (panelError.code === "rate-limited") {
       await sleep(10_000);
