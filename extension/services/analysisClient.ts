@@ -23,6 +23,9 @@ export async function postAnalysis(video: Video): Promise<AnalysisResult> {
     durationSeconds: video.durationSeconds,
   };
 
+  if (!WXT_AZURE_FUNCTION_URL) {
+    throw makePanelError("service-error", "The analysis service is not configured.", "Please reinstall the extension.", false);
+  }
   const endpoint = new URL(WXT_AZURE_FUNCTION_URL);
   if (WXT_AZURE_FUNCTION_KEY) {
     endpoint.searchParams.set("code", WXT_AZURE_FUNCTION_KEY);

@@ -75,6 +75,9 @@ export async function* sendChatMessage(req: ChatRequest): AsyncGenerator<string>
 }
 
 function buildChatUrl(): string {
+  if (!WXT_AZURE_FUNCTION_URL) {
+    throw makePanelError("service-error", "The chat service is not configured.", "Please reinstall the extension.", false);
+  }
   const base = WXT_AZURE_FUNCTION_URL.replace(/\/api\/analyze$/, "/api/chat");
   const url = new URL(base);
   if (WXT_AZURE_FUNCTION_KEY) {
