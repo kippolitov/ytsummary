@@ -79,5 +79,5 @@ app.http("analyze-preflight", {
   methods: ["OPTIONS"],
   authLevel: "anonymous",
   route: "analyze",
-  handler: async () => ({ status: 204, headers: corsHeaders() }),
+  handler: () => ({ status: 204, headers: corsHeaders() }),
 });
