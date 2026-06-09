@@ -4,9 +4,14 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to release (e.g. v1.2.3)'
+        required: true
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ inputs.tag_name || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -16,16 +21,19 @@ jobs:
   release:
     name: Build and Release Extension
     runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ inputs.tag_name || github.ref_name }}
     steps:
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag_name || github.ref_name }}
 
       - name: Validate version matches tag
         run: |
           PKG_VERSION=$(jq -r '.version' extension/package.json)
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${TAG_NAME#v}"
           if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
             echo "ERROR: package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
             exit 1
@@ -36,8 +44,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" &>/dev/null; then
-            echo "ERROR: GitHub Release $GITHUB_REF_NAME already exists"
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "ERROR: GitHub Release $TAG_NAME already exists"
             exit 1
           fi
 
@@ -83,8 +91,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
             --generate-notes \
             "${{ env.ARCHIVE }}"
 
