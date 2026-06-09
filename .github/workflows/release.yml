@@ -79,7 +79,17 @@ jobs:
           echo "ARCHIVE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
 
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            "${{ env.ARCHIVE }}"
+
       - name: Email archive password
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.office365.com
@@ -94,12 +104,3 @@ jobs:
             The password for ytsummary-v${{ env.VERSION }}.zip attached to the GitHub Release is:
 
             ${{ env.ARCHIVE_PASSWORD }}
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes \
-            "${{ env.ARCHIVE }}"
