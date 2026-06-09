@@ -87,8 +87,15 @@ function corsHeaders(): Record<string, string> {
 }
 
 app.http("chat", {
-  methods: ["POST", "OPTIONS"],
+  methods: ["POST"],
   authLevel: "function",
   route: "chat",
   handler: chatHandler,
+});
+
+app.http("chat-preflight", {
+  methods: ["OPTIONS"],
+  authLevel: "anonymous",
+  route: "chat",
+  handler: async () => ({ status: 204, headers: corsHeaders() }),
 });
