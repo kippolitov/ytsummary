@@ -69,8 +69,15 @@ function corsHeaders(): Record<string, string> {
 }
 
 app.http("analyze", {
-  methods: ["POST", "OPTIONS"],
+  methods: ["POST"],
   authLevel: "function",
   route: "analyze",
   handler: analyzeHandler,
+});
+
+app.http("analyze-preflight", {
+  methods: ["OPTIONS"],
+  authLevel: "anonymous",
+  route: "analyze",
+  handler: async () => ({ status: 204, headers: corsHeaders() }),
 });
