@@ -67,6 +67,13 @@ jobs:
         run: npm test
         working-directory: extension
 
+      - name: Verify required secrets
+        run: |
+          if [ -z "${{ secrets.AZURE_FUNCTION_URL }}" ]; then
+            echo "ERROR: AZURE_FUNCTION_URL secret is not set"
+            exit 1
+          fi
+
       - name: Build extension
         env:
           WXT_AZURE_FUNCTION_URL: ${{ secrets.AZURE_FUNCTION_URL }}
