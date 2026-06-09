@@ -8,8 +8,11 @@ import type {
 } from "../types/messages";
 import type { PanelError, Video } from "../types/index";
 
+declare const WXT_AZURE_FUNCTION_URL: string;
+
 export default defineBackground({
   main() {
+    console.log("[background] service URL configured:", !!WXT_AZURE_FUNCTION_URL);
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
     chrome.runtime.onMessage.addListener(
@@ -53,7 +56,8 @@ async function handleTranscriptReady(video: Video): Promise<void> {
     };
     broadcastToSidePanel(msg);
   } catch (err) {
-    console.error("[background] postAnalysis failed:", err);
+    const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[background] postAnalysis failed:", errDetail);
     const panelError = mapToAnalysisError(err);
     if (panelError.code === "rate-limited") {
       await sleep(10_000);
