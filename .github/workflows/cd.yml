@@ -205,3 +205,9 @@ jobs:
         run: |
           git tag -a "v${{ steps.bump.outputs.VERSION }}" -m "Release v${{ steps.bump.outputs.VERSION }}"
           git push origin "v${{ steps.bump.outputs.VERSION }}"
+
+      - name: Trigger release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh workflow run release.yml --ref main -f tag_name="v${{ steps.bump.outputs.VERSION }}"
