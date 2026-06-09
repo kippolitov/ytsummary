@@ -116,20 +116,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Generate 8-character alphanumeric password
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
-          # Mask the password so it never appears in logs
           echo "::add-mask::$PASSWORD"
-          # Wrap WXT zip output in a password-protected AES-256 archive (.7z supports header encryption)
-          7za a -p"$PASSWORD" -mhe=on "extension-${{ github.sha }}.7z" extension/.output/*.zip
-          # Store the password back to GitHub Secrets (overwrites previous value)
+          7za a -tzip -p"$PASSWORD" "extension-${{ github.sha }}.zip" extension/.output/*.zip
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
 
       - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ github.sha }}
-          path: extension-${{ github.sha }}.7z
+          path: extension-${{ github.sha }}.zip
           retention-days: 30
 
   # ── Azure Functions deployment ────────────────────────────────────────────
