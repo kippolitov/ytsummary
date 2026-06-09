@@ -73,10 +73,27 @@ jobs:
         run: |
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
           echo "::add-mask::$PASSWORD"
-          ARCHIVE="ytsummary-v${{ env.VERSION }}.7z"
-          7za a -p"$PASSWORD" -mhe=on "$ARCHIVE" extension/.output/*.zip
+          ARCHIVE="ytsummary-v${{ env.VERSION }}.zip"
+          7za a -tzip -p"$PASSWORD" "$ARCHIVE" extension/.output/*.zip
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          echo "ARCHIVE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
+
+      - name: Email archive password
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.office365.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "ytsummary v${{ env.VERSION }} release archive password"
+          to: kippolitov@5kkg35.onmicrosoft.com
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: |
+            The password for ytsummary-v${{ env.VERSION }}.zip attached to the GitHub Release is:
+
+            ${{ env.ARCHIVE_PASSWORD }}
 
       - name: Create GitHub Release
         env:
