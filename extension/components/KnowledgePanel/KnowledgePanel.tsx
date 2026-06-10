@@ -25,7 +25,7 @@ export function KnowledgePanel({ result, videoTitle, channelName }: KnowledgePan
           )}
         </header>
       )}
-      <SummarySection summary={result.summary} />
+      <SummarySection tldr={result.tldr} />
       <TopicsSection topics={result.topics} />
       <StepsSection steps={result.steps} />
       <ReferencesSection references={result.references} />

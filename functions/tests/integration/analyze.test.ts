@@ -16,7 +16,7 @@ import { fetchTranscript } from "../../src/services/transcriptFetcher";
 
 const fixtureResult = {
   videoId: "abc12345678",
-  summary: "A recorded fixture summary for the test.",
+  tldr: ["Dependency injection decouples object creation from usage.", "Constructor injection is the preferred pattern in .NET."],
   topics: [{ name: "DI", description: "Dependency injection overview.", timestampSeconds: 30 }],
   steps: [],
   references: [],
@@ -65,7 +65,7 @@ describe("POST /api/analyze — integration", () => {
     const response = await analyzeHandler(req, makeContext());
     expect(response.status).toBe(200);
     const body = response.jsonBody as typeof fixtureResult;
-    expect(body.summary).toBe(fixtureResult.summary);
+    expect(body.tldr).toEqual(fixtureResult.tldr);
     expect(body.videoId).toBe("abc12345678");
   });
 
