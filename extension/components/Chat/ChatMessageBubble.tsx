@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "../../types/chat";
+import { remarkPlugins, rehypePlugins, markdownComponents } from "./markdown/markdownComponents.tsx";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -34,7 +35,13 @@ export function ChatMessageBubble({ message, isStreaming = false }: ChatMessageB
     <div className="px-3 py-1" aria-label="Assistant response">
       <div className="rounded-2xl rounded-tl-sm bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-gray-200/80 dark:bg-gray-800 dark:ring-gray-700/60">
         <div className="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-200">
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            components={markdownComponents}
+          >
+            {message.content}
+          </ReactMarkdown>
         </div>
         {isStreaming && (
           <span

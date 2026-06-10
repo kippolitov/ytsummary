@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ChatRequest } from "../../src/models/index";
+import { buildChatSystemPrompt } from "../../src/services/chatOrchestrator";
 
 vi.mock("openai", () => {
   const mockStream = {
@@ -142,5 +143,25 @@ describe("chatOrchestrator — streamChatResponse", () => {
       results.push(delta);
     }
     expect(results).toEqual(["Real content"]);
+  });
+});
+
+describe("chatOrchestrator — buildChatSystemPrompt formatting guidance", () => {
+  it("contains structural formatting instructions: headings, callout, table", () => {
+    const prompt = buildChatSystemPrompt("Test Video", "test transcript");
+    expect(prompt).toContain("heading");
+    expect(prompt).toContain("callout");
+    expect(prompt).toContain("table");
+  });
+
+  it("instructs use of code blocks with language identifier", () => {
+    const prompt = buildChatSystemPrompt("Test Video", "test transcript");
+    expect(prompt).toContain("code");
+  });
+
+  it("includes the video title and transcript", () => {
+    const prompt = buildChatSystemPrompt("My Video", "Some transcript text.");
+    expect(prompt).toContain("My Video");
+    expect(prompt).toContain("Some transcript text.");
   });
 });
