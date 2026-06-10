@@ -13,9 +13,16 @@ ${req.transcript}
 
 Return a JSON object with EXACTLY this structure (no extra fields):
 {
-  "summary": "3-5 sentence plain-language overview of the video",
+  "tldr": [
+    "First key takeaway as a single complete sentence",
+    "Second key takeaway as a single complete sentence"
+  ],
   "topics": [
-    { "name": "Topic name", "description": "1-2 sentence description", "timestampSeconds": null }
+    {
+      "name": "Specific, descriptive topic title (not 'Topic 1')",
+      "description": "2-5 sentence contextual explanation. Include at least one specific insight, implication, or supporting detail not captured in the tldr bullets.",
+      "timestampSeconds": null
+    }
   ],
   "steps": [
     { "order": 1, "text": "Step description", "timestampSeconds": null }
@@ -26,7 +33,8 @@ Return a JSON object with EXACTLY this structure (no extra fields):
 }
 
 Rules:
-- topics: extract major concepts covered. Empty array if none identifiable.
+- tldr: array of 3 to 7 bullet strings. Each bullet is one complete sentence conveying a distinct takeaway. No bullet may repeat or paraphrase another bullet.
+- topics: extract major concepts in the order they appear in the video. Each description must be 2-5 sentences and include at least one insight not in the tldr. Use specific titles (e.g., "Gradient Descent Optimization") not generic labels (e.g., "Topic 3"). Empty array if none identifiable.
 - steps: extract ordered procedural instructions only for tutorial/how-to content. Empty array for opinion/news/interview content.
 - references: extract named tools, libraries, products, papers, websites. Empty array if none mentioned.
 - timestampSeconds: use null unless you can determine it from context.
@@ -57,7 +65,7 @@ export async function orchestrateAnalysis(req: AnalyzeRequest): Promise<AnalyzeR
   }
 
   let parsed: {
-    summary?: unknown;
+    tldr?: unknown;
     topics?: unknown;
     steps?: unknown;
     references?: unknown;
@@ -68,9 +76,12 @@ export async function orchestrateAnalysis(req: AnalyzeRequest): Promise<AnalyzeR
     throw new Error(`Failed to parse OpenAI response as JSON: ${content.slice(0, 100)}`);
   }
 
+  const rawTldr = Array.isArray(parsed.tldr) ? parsed.tldr as string[] : [];
+  const tldr = rawTldr.filter((b): b is string => typeof b === "string").slice(0, 7);
+
   return {
     videoId: req.videoId,
-    summary: typeof parsed.summary === "string" ? parsed.summary : "",
+    tldr,
     topics: Array.isArray(parsed.topics) ? parsed.topics as AnalyzeResponse["topics"] : [],
     steps: Array.isArray(parsed.steps) ? parsed.steps as AnalyzeResponse["steps"] : [],
     references: Array.isArray(parsed.references) ? parsed.references as AnalyzeResponse["references"] : [],
