@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { getChatSession, saveChatSession } from "../../services/chatCache";
 import { getVideo } from "../../services/sessionCache";
 import { sendChatMessage } from "../../services/chatClient";
+import { fetchFollowUpPrompts } from "../../services/followUpClient";
 import type { ChatMessage, ChatSession, ChatHistoryItem, ChatMessageType } from "../../types/chat";
 import type { Video } from "../../types/index";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { BlogPostButton } from "./BlogPostButton";
+import { FollowUpPromptChips } from "./FollowUpPromptChips";
 
 interface ChatPanelProps {
   videoId: string;
@@ -23,6 +25,8 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
   const [video, setVideo] = useState<Video | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inputPrefill, setInputPrefill] = useState<string | undefined>(undefined);
+  const [followUpPrompts, setFollowUpPrompts] = useState<string[]>([]);
+  const [isLoadingFollowUp, setIsLoadingFollowUp] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<boolean>(false);
 
@@ -61,6 +65,7 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
   const handleSend = async (text: string, mode: ChatMessageType = "chat") => {
     if (!video || isStreaming) return;
     setError(null);
+    setFollowUpPrompts([]);
     abortRef.current = false;
 
     const userMsg: ChatMessage = {
@@ -120,6 +125,22 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
 
     if (accumulated) {
       await persistSession(updatedAll);
+      if (mode === "chat") {
+        setIsLoadingFollowUp(true);
+        const historyWithReply: ChatHistoryItem[] = updatedAll.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+        const prompts = await fetchFollowUpPrompts({
+          videoId,
+          videoTitle: video.title,
+          transcript: video.transcript,
+          messages: historyWithReply,
+          mode: "follow-up-prompts",
+        });
+        setFollowUpPrompts(prompts);
+        setIsLoadingFollowUp(false);
+      }
     }
   };
 
@@ -170,15 +191,11 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
             <div key={msg.id}>
               <ChatMessageBubble message={msg} />
               {isLastAssistant && (
-                <div className="px-3 pb-1">
-                  <button
-                    onClick={() => setInputPrefill("Can you dive deeper into this topic?")}
-                    aria-label="Dive deeper into this topic"
-                    className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-400 dark:hover:bg-blue-950/60"
-                  >
-                    Dive Deeper
-                  </button>
-                </div>
+                <FollowUpPromptChips
+                  prompts={followUpPrompts}
+                  isLoading={isLoadingFollowUp}
+                  onSelect={(p) => { setInputPrefill(undefined); void handleSend(p); }}
+                />
               )}
             </div>
           );

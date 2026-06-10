@@ -1,6 +1,6 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { isChatRequest } from "../models/index";
-import { streamChatResponse } from "../services/chatOrchestrator";
+import { isChatRequest, isFollowUpPromptsRequest } from "../models/index";
+import { streamChatResponse, generateFollowUpPrompts } from "../services/chatOrchestrator";
 
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MAX_MESSAGES = 50;
@@ -32,6 +32,20 @@ export async function chatHandler(
 
   if (body.messages.length > MAX_MESSAGES) {
     return errorResponse(422, "too-many-messages", `messages array exceeds the ${MAX_MESSAGES} item limit.`);
+  }
+
+  if (isFollowUpPromptsRequest(body)) {
+    try {
+      const prompts = await generateFollowUpPrompts(body);
+      return {
+        status: 200,
+        headers: { ...corsHeaders(), "Content-Type": "application/json" },
+        jsonBody: { prompts },
+      };
+    } catch (err) {
+      context.error("generateFollowUpPrompts failed:", err);
+      return errorResponse(500, "service-error", "Failed to generate follow-up prompts.");
+    }
   }
 
   try {
