@@ -41,7 +41,7 @@ export interface FunctionError {
   };
 }
 
-export type ChatMode = "chat" | "blog-post";
+export type ChatMode = "chat" | "blog-post" | "follow-up-prompts";
 
 export interface ChatHistoryItem {
   role: "user" | "assistant";
@@ -68,6 +68,10 @@ export function isChatRequest(body: unknown): body is ChatRequest {
     Array.isArray(b.messages) &&
     b.messages.length >= 1
   );
+}
+
+export function isFollowUpPromptsRequest(body: ChatRequest): boolean {
+  return body.mode === "follow-up-prompts" && body.messages.length >= 2;
 }
 
 export function isAnalyzeRequest(body: unknown): body is AnalyzeRequest {
