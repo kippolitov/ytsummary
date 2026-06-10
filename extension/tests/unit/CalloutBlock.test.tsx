@@ -2,14 +2,6 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CalloutBlock } from "../../components/Chat/markdown/CalloutBlock";
 
-function renderCallout(text: string) {
-  return render(
-    <CalloutBlock>
-      <p><strong>{text.split(": ")[0]!.replace(/\*\*/g, "")}</strong>: {text.split(": ").slice(1).join(": ")}</p>
-    </CalloutBlock>
-  );
-}
-
 describe("CalloutBlock", () => {
   it("renders Key Insight as a styled callout div", () => {
     const { container } = render(
