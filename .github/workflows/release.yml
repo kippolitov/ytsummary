@@ -110,20 +110,24 @@ jobs:
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
           echo "::add-mask::$PASSWORD"
           ARCHIVE="ytsummary-v${{ env.VERSION }}.zip"
-          (cd extension/.output && 7za a -tzip -mem=ZipCrypto -p"$PASSWORD" "../../$ARCHIVE" chrome-mv3)
+          FOLDER="chrome-mv3-v${{ env.VERSION }}"
+          cp -r extension/.output/chrome-mv3 "extension/.output/$FOLDER"
+          (cd extension/.output && 7za a -tzip -mem=ZipCrypto -p"$PASSWORD" "../../$ARCHIVE" "$FOLDER")
+          rm -rf "extension/.output/$FOLDER"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
           echo "ARCHIVE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
 
       - name: Validate archive contents
         run: |
-          UNEXPECTED=$(7za l "${{ env.ARCHIVE }}" -ba | awk '{print $NF}' | grep -v '^chrome-mv3' | grep -v '^$' || true)
+          EXPECTED="chrome-mv3-v${{ env.VERSION }}"
+          UNEXPECTED=$(7za l "${{ env.ARCHIVE }}" -ba | awk '{print $NF}' | grep -v "^$EXPECTED" | grep -v '^$' || true)
           if [ -n "$UNEXPECTED" ]; then
             echo "ERROR: Archive contains unexpected top-level entries:"
             echo "$UNEXPECTED"
             exit 1
           fi
-          echo "OK: Archive contains only chrome-mv3"
+          echo "OK: Archive contains only $EXPECTED"
 
       - name: Create GitHub Release
         env:
