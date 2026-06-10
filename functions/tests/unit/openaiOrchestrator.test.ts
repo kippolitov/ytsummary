@@ -35,7 +35,7 @@ describe("openaiOrchestrator", () => {
         {
           message: {
             content: JSON.stringify({
-              summary: "A summary.",
+              tldr: [],
               topics: [],
               steps: [],
               references: [],
@@ -59,7 +59,7 @@ describe("openaiOrchestrator", () => {
   it("parses valid JSON response into AnalyzeResponse", async () => {
     const { AzureOpenAI } = await import("openai");
     const responsePayload = {
-      summary: "Test summary.",
+      tldr: ["Bullet one.", "Bullet two."],
       topics: [{ name: "DI", description: "Dependency Injection", timestampSeconds: 30 }],
       steps: [{ order: 1, text: "Step one", timestampSeconds: null }],
       references: [],
@@ -75,7 +75,7 @@ describe("openaiOrchestrator", () => {
     }));
 
     const result = await orchestrateAnalysis(baseRequest);
-    expect(result.summary).toBe("Test summary.");
+    expect(result.tldr).toEqual(["Bullet one.", "Bullet two."]);
     expect(result.topics).toHaveLength(1);
     expect(result.steps).toHaveLength(1);
     expect(result.videoId).toBe(baseRequest.videoId);
