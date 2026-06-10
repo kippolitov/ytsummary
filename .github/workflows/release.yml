@@ -81,13 +81,6 @@ jobs:
         run: npm run build
         working-directory: extension
 
-      - name: Zip extension
-        env:
-          WXT_AZURE_FUNCTION_URL: ${{ secrets.AZURE_FUNCTION_URL }}
-          WXT_AZURE_FUNCTION_KEY: ${{ secrets.AZURE_FUNCTION_KEY }}
-        run: npm run zip
-        working-directory: extension
-
       - name: Verify URL baked into zipped extension
         run: |
           echo "Checking all JS output files for guard string..."
@@ -102,6 +95,14 @@ jobs:
           fi
           echo "OK: URL correctly baked in after zip rebuild"
 
+      - name: Validate extension build output
+        run: |
+          if [ ! -f extension/.output/chrome-mv3/manifest.json ]; then
+            echo "ERROR: Chrome extension folder not found or missing manifest.json"
+            exit 1
+          fi
+          echo "OK: extension/.output/chrome-mv3/manifest.json present"
+
       - name: Create password-protected archive
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -109,10 +110,20 @@ jobs:
           PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
           echo "::add-mask::$PASSWORD"
           ARCHIVE="ytsummary-v${{ env.VERSION }}.zip"
-          7za a -tzip -p"$PASSWORD" "$ARCHIVE" extension/.output/*.zip
+          (cd extension/.output && 7za a -tzip -mem=ZipCrypto -p"$PASSWORD" "../../$ARCHIVE" chrome-mv3)
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
           echo "ARCHIVE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
+
+      - name: Validate archive contents
+        run: |
+          UNEXPECTED=$(7za l "${{ env.ARCHIVE }}" -ba | awk '{print $NF}' | grep -v '^chrome-mv3' | grep -v '^$' || true)
+          if [ -n "$UNEXPECTED" ]; then
+            echo "ERROR: Archive contains unexpected top-level entries:"
+            echo "$UNEXPECTED"
+            exit 1
+          fi
+          echo "OK: Archive contains only chrome-mv3"
 
       - name: Create GitHub Release
         env:
