@@ -27,7 +27,7 @@ export interface Reference {
 
 export interface AnalyzeResponse {
   videoId: string;
-  summary: string;
+  tldr: string[];
   topics: Topic[];
   steps: ImplementationStep[];
   references: Reference[];

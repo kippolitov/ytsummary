@@ -30,7 +30,7 @@ export interface Reference {
 
 export interface AnalysisResult {
   videoId: string;
-  summary: string;
+  tldr: string[];
   topics: Topic[];
   steps: ImplementationStep[];
   references: Reference[];
