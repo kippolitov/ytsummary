@@ -33,3 +33,15 @@ export interface ChatRequest {
 export interface ChatStreamChunk {
   delta: string;
 }
+
+export interface FollowUpPromptsRequest {
+  videoId: string;
+  videoTitle: string;
+  transcript: string;
+  messages: ChatHistoryItem[];
+  mode: "follow-up-prompts";
+}
+
+export interface FollowUpPromptsResponse {
+  prompts: string[];
+}
