@@ -64,6 +64,9 @@ jobs:
           name: extension-${{ github.sha }}
           path: extension/.output/*.zip
           retention-days: 30
+          # .output is a hidden dir, excluded by upload-artifact v4 by default
+          include-hidden-files: true
+          if-no-files-found: error
 
   functions-ci:
     name: Functions CI
