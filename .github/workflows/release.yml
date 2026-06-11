@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
@@ -42,10 +42,10 @@ jobs:
 
       - name: Check for duplicate release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: |
-          if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "ERROR: GitHub Release $TAG_NAME already exists"
+          if gh release view "$TAG_NAME" --repo kippolitov/ytsummary-releases &>/dev/null; then
+            echo "ERROR: GitHub Release $TAG_NAME already exists in ytsummary-releases"
             exit 1
           fi
 
@@ -71,6 +71,10 @@ jobs:
         run: |
           if [ -z "${{ secrets.AZURE_FUNCTION_URL }}" ]; then
             echo "ERROR: AZURE_FUNCTION_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.RELEASES_REPO_TOKEN }}" ]; then
+            echo "ERROR: RELEASES_REPO_TOKEN secret is not set"
             exit 1
           fi
 
@@ -103,20 +107,14 @@ jobs:
           fi
           echo "OK: extension/.output/chrome-mv3/manifest.json present"
 
-      - name: Create password-protected archive
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Create archive
         run: |
-          PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
-          echo "::add-mask::$PASSWORD"
           ARCHIVE="ytsummary-v${{ env.VERSION }}.zip"
           FOLDER="chrome-mv3-v${{ env.VERSION }}"
           cp -r extension/.output/chrome-mv3 "extension/.output/$FOLDER"
-          (cd extension/.output && 7za a -tzip -mem=ZipCrypto -p"$PASSWORD" "../../$ARCHIVE" "$FOLDER")
+          (cd extension/.output && 7za a -tzip "../../$ARCHIVE" "$FOLDER")
           rm -rf "extension/.output/$FOLDER"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
-          echo "ARCHIVE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
-          gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
 
       - name: Validate archive contents
         run: |
@@ -129,28 +127,12 @@ jobs:
           fi
           echo "OK: Archive contains only $EXPECTED"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release in private repo
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: |
           gh release create "$TAG_NAME" \
+            --repo kippolitov/ytsummary-releases \
             --title "$TAG_NAME" \
-            --generate-notes \
+            --notes "Built from ${GITHUB_REPOSITORY}@${GITHUB_SHA}" \
             "${{ env.ARCHIVE }}"
-
-      - name: Email archive password
-        continue-on-error: true
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.office365.com
-          server_port: 587
-          secure: false
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "ytsummary v${{ env.VERSION }} release archive password"
-          to: kippolitov@5kkg35.onmicrosoft.com
-          from: ${{ secrets.SMTP_USERNAME }}
-          body: |
-            The password for ytsummary-v${{ env.VERSION }}.zip attached to the GitHub Release is:
-
-            ${{ env.ARCHIVE_PASSWORD }}

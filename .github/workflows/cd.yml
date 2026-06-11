@@ -90,8 +90,6 @@ jobs:
     name: Package Extension
     runs-on: ubuntu-latest
     needs: [extension-ci]
-    # secrets:write is not available on GITHUB_TOKEN; gh secret set uses GH_PAT.
-    # GH_PAT must be a fine-grained or classic PAT with repo > secrets write scope.
     permissions:
       contents: read
     steps:
@@ -118,20 +116,11 @@ jobs:
         run: npm run zip
         working-directory: extension
 
-      - name: Generate password, create protected archive, and store secret
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          PASSWORD=$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | head -c 8)
-          echo "::add-mask::$PASSWORD"
-          7za a -tzip -p"$PASSWORD" "extension-${{ github.sha }}.zip" extension/.output/*.zip
-          gh secret set EXTENSION_ZIP_PASSWORD -b "$PASSWORD" --repo "$GITHUB_REPOSITORY"
-
       - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ github.sha }}
-          path: extension-${{ github.sha }}.zip
+          path: extension/.output/*.zip
           retention-days: 30
 
   # ── Azure Functions deployment ────────────────────────────────────────────
