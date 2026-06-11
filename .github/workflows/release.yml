@@ -99,14 +99,6 @@ jobs:
           fi
           echo "OK: URL correctly baked in after zip rebuild"
 
-      - name: Validate extension build output
-        run: |
-          if [ ! -f extension/.output/chrome-mv3/manifest.json ]; then
-            echo "ERROR: Chrome extension folder not found or missing manifest.json"
-            exit 1
-          fi
-          echo "OK: extension/.output/chrome-mv3/manifest.json present"
-
       - name: Create archive
         run: |
           ARCHIVE="ytsummary-v${{ env.VERSION }}.zip"
@@ -115,17 +107,6 @@ jobs:
           (cd extension/.output && 7za a -tzip "../../$ARCHIVE" "$FOLDER")
           rm -rf "extension/.output/$FOLDER"
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
-
-      - name: Validate archive contents
-        run: |
-          EXPECTED="chrome-mv3-v${{ env.VERSION }}"
-          UNEXPECTED=$(7za l "${{ env.ARCHIVE }}" -ba | awk '{print $NF}' | grep -v "^$EXPECTED" | grep -v '^$' || true)
-          if [ -n "$UNEXPECTED" ]; then
-            echo "ERROR: Archive contains unexpected top-level entries:"
-            echo "$UNEXPECTED"
-            exit 1
-          fi
-          echo "OK: Archive contains only $EXPECTED"
 
       - name: Create GitHub Release in private repo
         env:

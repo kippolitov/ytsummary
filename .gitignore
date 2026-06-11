@@ -9,6 +9,7 @@ dist/
 build/
 .output/
 .wxt/
+func-deploy.zip
 
 # Env files (contain secrets)
 .env
