@@ -241,11 +241,10 @@ To publish a new versioned release of the extension:
    - Validates that the tag version matches `extension/package.json`
    - Rejects duplicate releases (same tag cannot be released twice)
    - Runs lint, unit tests, and build as a CI gate
-   - Packages the extension as a password-protected `ytsummary-v0.1.0.7z` archive
-   - Stores the archive password in the `EXTENSION_ZIP_PASSWORD` repository secret
-   - Creates a GitHub Release tagged `v0.1.0` with the archive as the sole downloadable asset
+   - Packages the extension as a `ytsummary-v0.1.0.zip` archive
+   - Creates a GitHub Release tagged `v0.1.0` in the **private** [kippolitov/ytsummary-releases](https://github.com/kippolitov/ytsummary-releases) repository, with the archive as the sole downloadable asset
 
-The archive password is rotated on every release and shared with authorized users out-of-band (e.g., Slack or email). It is never stored in the repository, release notes, or pipeline logs.
+The build has the Azure Function URL and key baked in, so distribution is access-controlled: only collaborators on the private `ytsummary-releases` repository can download release assets. Share builds with others by downloading the zip yourself and sending it out-of-band.
 
 ---
 
@@ -256,8 +255,8 @@ GitHub Actions workflows run automatically on every push:
 | Trigger | What runs |
 |---|---|
 | Push to any branch (except `main`) | Lint + unit tests + build for both `extension/` and `functions/` (parallel) |
-| Push to `main` (PR merge) | Same CI checks, then packages the extension as a password-protected `.7z` artifact and deploys the Functions app to Azure |
-| Push of `v*.*.*` tag | Version validation, CI gate, password-protected archive, GitHub Release creation |
+| Push to `main` (PR merge) | Same CI checks, then uploads the extension `.zip` as a workflow artifact and deploys the Functions app to Azure |
+| Push of `v*.*.*` tag | Version validation, CI gate, archive build, GitHub Release creation in `kippolitov/ytsummary-releases` |
 
 ### Required GitHub Secrets
 
@@ -269,9 +268,8 @@ Before the CD pipeline can succeed, configure these secrets in **Settings → Se
 | `AZURE_TENANT_ID` | Azure tenant ID (for OIDC login) |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID (for OIDC login) |
 | `AZURE_FUNCTIONAPP_NAME` | Name of the Azure Function App to deploy to |
-| `GH_PAT` | Fine-grained Personal Access Token with **Secrets → Read and write** for this repository (needed to store the extension zip password) |
-
-`EXTENSION_ZIP_PASSWORD` is written automatically by the CD pipeline after each main merge — do not create it manually.
+| `GH_PAT` | Fine-grained Personal Access Token with **Contents → Read and write** and **Actions → Read and write** for this repository (used by the CD pipeline to push version-bump commits/tags and trigger the release workflow) |
+| `RELEASES_REPO_TOKEN` | Fine-grained Personal Access Token with **Contents → Read and write** for the private `kippolitov/ytsummary-releases` repository (used by the release workflow to create releases there) |
 
 See [specs/003-cicd-pipelines/quickstart.md](specs/003-cicd-pipelines/quickstart.md) for validation scenarios and setup instructions.
 
