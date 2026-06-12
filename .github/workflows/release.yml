@@ -117,3 +117,54 @@ jobs:
             --title "$TAG_NAME" \
             --notes "Built from ${GITHUB_REPOSITORY}@${GITHUB_SHA}" \
             "${{ env.ARCHIVE }}"
+
+  # Smoke-tests the release build against the real backend. Non-blocking:
+  # a test failure keeps the run green and surfaces as a warning annotation
+  # on the run summary instead. Rebuilds rather than sharing an artifact:
+  # builds with baked-in secrets must not be uploaded. noTranscript and
+  # errorRetry self-skip (need extra env); navigation and richChat run.
+  # xvfb provides a display for headed Chromium, matching how the suite is
+  # verified locally.
+  e2e-smoke:
+    name: E2e Smoke Tests (non-blocking)
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name || github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: extension
+
+      - name: Build extension
+        env:
+          WXT_AZURE_FUNCTION_URL: ${{ secrets.AZURE_FUNCTION_URL }}
+          WXT_AZURE_FUNCTION_KEY: ${{ secrets.AZURE_FUNCTION_KEY }}
+        run: npm run build
+        working-directory: extension
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: extension
+
+      - name: Run e2e tests
+        id: e2e
+        continue-on-error: true
+        env:
+          E2E: '1'
+        run: xvfb-run npx playwright test --retries=1
+        working-directory: extension
+
+      - name: Warn on e2e failure
+        if: steps.e2e.outcome == 'failure'
+        run: |
+          echo "::warning title=E2e smoke tests failed::The release was published, but the e2e smoke tests against the live backend failed. Check the 'Run e2e tests' step logs."
+          echo "⚠️ **E2e smoke tests failed** — release published anyway (non-blocking). See the *Run e2e tests* step." >> "$GITHUB_STEP_SUMMARY"

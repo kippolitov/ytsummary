@@ -1,41 +1,37 @@
-import { test, expect, chromium } from "@playwright/test";
+import {
+  test,
+  expect,
+  e2eEnabled,
+  skipReason,
+  VIDEO_A,
+  VIDEO_B,
+  watchUrl,
+} from "./fixtures";
 
 test.describe("US2 — Video navigation refresh", () => {
-  test.skip(
-    true,
-    "E2e test requires Chrome with extension loaded and valid Azure Function URL. Run manually per quickstart.md Scenario 2."
-  );
+  test.skip(!e2eEnabled, skipReason);
 
-  test("navigating to Video B resets panel and shows new content", async () => {
-    const browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
-    const page = await context.newPage();
+  test("navigating to Video B resets panel and shows new content", async ({
+    context,
+    sidePanel,
+  }) => {
+    const video = await context.newPage();
+    await video.goto(watchUrl(VIDEO_A));
 
-    await page.goto("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
-    await page.waitForTimeout(35_000);
-
-    const summaryA = await page
-      .frameLocator("pierce/#video-knowledge-panel-root")
-      .locator("[data-testid=summary]")
-      .textContent();
+    const summary = sidePanel.getByLabel("Key takeaways");
+    await expect(summary).toBeVisible({ timeout: 90_000 });
+    const summaryA = await summary.textContent();
     expect(summaryA).toBeTruthy();
 
-    await page.goto("https://www.youtube.com/watch?v=jNQXAC9IVRw");
+    await video.goto(watchUrl(VIDEO_B));
 
-    const loading = page
-      .frameLocator("pierce/#video-knowledge-panel-root")
-      .locator("[role=status]");
-    await expect(loading).toBeVisible({ timeout: 5_000 });
+    await expect(sidePanel.getByRole("status")).toBeVisible({
+      timeout: 15_000,
+    });
 
-    await page.waitForTimeout(35_000);
-
-    const summaryB = await page
-      .frameLocator("pierce/#video-knowledge-panel-root")
-      .locator("[data-testid=summary]")
-      .textContent();
+    await expect(summary).toBeVisible({ timeout: 90_000 });
+    const summaryB = await summary.textContent();
     expect(summaryB).toBeTruthy();
     expect(summaryB).not.toBe(summaryA);
-
-    await browser.close();
   });
 });
