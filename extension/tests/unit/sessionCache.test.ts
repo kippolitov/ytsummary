@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getResult, setResult, hasResult, storeVideo, getVideo } from "../../services/sessionCache";
+import { getResult, setResult, hasResult, storeVideo, getVideo, setLastVideo, getLastVideo } from "../../services/sessionCache";
 import type { AnalysisResult, Video } from "../../types/index";
 
 const mockResult: AnalysisResult = {
@@ -134,5 +134,35 @@ describe("sessionCache — storeVideo / getVideo", () => {
     );
     await storeVideo(mockVideo);
     expect(store["video_abc12345678"]).toBeDefined();
+  });
+});
+
+describe("sessionCache — setLastVideo / getLastVideo", () => {
+  beforeEach(() => {
+    const storageMock = chrome.storage.session as {
+      get: ReturnType<typeof vi.fn>;
+      set: ReturnType<typeof vi.fn>;
+    };
+    storageMock.get.mockReset();
+    storageMock.set.mockReset();
+  });
+
+  it("getLastVideo returns null when nothing has been stored", async () => {
+    (chrome.storage.session.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    expect(await getLastVideo()).toBeNull();
+  });
+
+  it("setLastVideo then getLastVideo round-trips the metadata", async () => {
+    const store: Record<string, unknown> = {};
+    (chrome.storage.session.set as ReturnType<typeof vi.fn>).mockImplementation(
+      async (data: Record<string, unknown>) => { Object.assign(store, data); }
+    );
+    (chrome.storage.session.get as ReturnType<typeof vi.fn>).mockImplementation(
+      async (key: string) => ({ [key]: store[key] })
+    );
+
+    const meta = { videoId: "abc12345678", title: "Last Video", channelName: "Last Channel" };
+    await setLastVideo(meta);
+    expect(await getLastVideo()).toEqual(meta);
   });
 });
