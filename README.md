@@ -255,7 +255,7 @@ GitHub Actions workflows run automatically on every push:
 | Trigger | What runs |
 |---|---|
 | Push to any branch (except `main`) | Lint + unit tests + build for both `extension/` and `functions/` (parallel) |
-| Push to `main` (PR merge) | Same CI checks, then uploads the extension `.zip` as a workflow artifact and deploys the Functions app to Azure |
+| Push to `main` (PR merge) | Same CI checks, then deploys the Functions app to Azure and triggers a versioned release |
 | Push of `v*.*.*` tag | Version validation, CI gate, archive build, GitHub Release creation in `kippolitov/ytsummary-releases` |
 
 ### Required GitHub Secrets
