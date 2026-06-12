@@ -1,44 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const fetchTranscriptMock = vi.hoisted(() => vi.fn());
+
 vi.mock("youtube-transcript", () => ({
   YoutubeTranscript: {
-    fetchTranscript: vi.fn(),
+    fetchTranscript: fetchTranscriptMock,
   },
 }));
 
 import { fetchTranscript } from "../../src/services/transcriptFetcher";
-import { YoutubeTranscript } from "youtube-transcript";
 
 describe("transcriptFetcher", () => {
   beforeEach(() => {
-    vi.mocked(YoutubeTranscript.fetchTranscript).mockReset();
+    fetchTranscriptMock.mockReset();
   });
 
   it("joins segment texts into a single transcript", async () => {
-    vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue([
+    fetchTranscriptMock.mockResolvedValue([
       { text: "Hello", duration: 1, offset: 0, lang: "en" },
       { text: "world", duration: 1, offset: 1, lang: "en" },
     ]);
 
     await expect(fetchTranscript("abc12345678")).resolves.toBe("Hello world");
+    expect(fetchTranscriptMock).toHaveBeenCalledWith("abc12345678");
   });
 
   it("returns null when no segments are returned", async () => {
-    vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue([]);
+    fetchTranscriptMock.mockResolvedValue([]);
     await expect(fetchTranscript("abc12345678")).resolves.toBeNull();
   });
 
   it("returns null when segments contain only whitespace", async () => {
-    vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue([
+    fetchTranscriptMock.mockResolvedValue([
       { text: " ", duration: 1, offset: 0, lang: "en" },
     ]);
     await expect(fetchTranscript("abc12345678")).resolves.toBeNull();
   });
 
   it("returns null when the fetch throws", async () => {
-    vi.mocked(YoutubeTranscript.fetchTranscript).mockRejectedValue(
-      new Error("Transcript is disabled")
-    );
+    fetchTranscriptMock.mockRejectedValue(new Error("Transcript is disabled"));
     await expect(fetchTranscript("abc12345678")).resolves.toBeNull();
   });
 });

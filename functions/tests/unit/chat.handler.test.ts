@@ -85,6 +85,7 @@ describe("chatHandler — edge cases", () => {
 
   it("encodes stream deltas as SSE and terminates with [DONE]", async () => {
     vi.mocked(streamChatResponse).mockImplementation(async function* () {
+      await Promise.resolve();
       yield "Hello";
       yield " world";
     });
@@ -98,6 +99,7 @@ describe("chatHandler — edge cases", () => {
 
   it("emits an in-stream error event when the generator throws mid-stream", async () => {
     vi.mocked(streamChatResponse).mockImplementation(async function* () {
+      await Promise.resolve();
       yield "partial";
       throw new Error("upstream failure");
     });
