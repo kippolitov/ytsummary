@@ -171,5 +171,16 @@ jobs:
       - name: Warn on e2e failure
         if: steps.e2e.outcome == 'failure'
         run: |
-          echo "::warning title=E2e smoke tests failed::The release was published, but the e2e smoke tests against the live backend failed. Check the 'Run e2e tests' step logs."
-          echo "⚠️ **E2e smoke tests failed** — release published anyway (non-blocking). See the *Run e2e tests* step." >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=E2e smoke tests failed::The release was published, but the e2e smoke tests against the live backend failed. Check the 'Run e2e tests' step logs and the e2e-test-results artifact (Playwright traces + page snapshots)."
+          echo "⚠️ **E2e smoke tests failed** — release published anyway (non-blocking). See the *Run e2e tests* step and the \`e2e-test-results\` artifact." >> "$GITHUB_STEP_SUMMARY"
+
+      # Playwright traces, screenshots, and error-context page snapshots —
+      # the only way to see what the page looked like on the runner.
+      - name: Upload e2e failure artifacts
+        if: steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: extension/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

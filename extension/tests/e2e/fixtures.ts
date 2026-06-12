@@ -25,7 +25,7 @@ export const test = base.extend<{
   sidePanel: Page;
 }>({
   // eslint-disable-next-line no-empty-pattern
-  context: async ({}, use) => {
+  context: async ({}, use, testInfo) => {
     if (!fs.existsSync(path.join(extensionPath, "manifest.json"))) {
       throw new Error(
         `Built extension not found at ${extensionPath}. Run \`npm run build\` first ` +
@@ -45,7 +45,15 @@ export const test = base.extend<{
         `--load-extension=${extensionPath}`,
       ],
     });
+    // The config-level `trace` option only applies to the built-in context
+    // fixture, so capture manually for this custom-launched context.
+    await context.tracing.start({ screenshots: true, snapshots: true });
     await use(context);
+    if (testInfo.status !== testInfo.expectedStatus) {
+      await context.tracing.stop({ path: testInfo.outputPath("trace.zip") });
+    } else {
+      await context.tracing.stop();
+    }
     await context.close();
     fs.rmSync(userDataDir, { recursive: true, force: true });
   },
