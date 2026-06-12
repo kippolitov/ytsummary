@@ -10,6 +10,7 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
     coverage: {
       provider: "v8",
+      reporter: ["text", "html", "lcov", "json-summary"],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
       include: ["services/**", "components/**", "entrypoints/**", "types/**"],
       exclude: ["node_modules", "tests", ".output"],
