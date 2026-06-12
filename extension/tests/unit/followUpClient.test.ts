@@ -16,7 +16,7 @@ const BASE_REQUEST: FollowUpPromptsRequest = {
 describe("fetchFollowUpPrompts", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
-    vi.stubGlobal("WXT_AZURE_FUNCTION_URL", "http://localhost:7071/api");
+    vi.stubGlobal("WXT_AZURE_FUNCTION_URL", "http://localhost:7071/api/analyze");
     vi.stubGlobal("WXT_AZURE_FUNCTION_KEY", "test-key");
   });
 
@@ -34,6 +34,10 @@ describe("fetchFollowUpPrompts", () => {
 
     const result = await fetchFollowUpPrompts(BASE_REQUEST);
     expect(result).toEqual(["Q1?", "Q2?", "Q3?"]);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "http://localhost:7071/api/chat?code=test-key",
+      expect.anything()
+    );
   });
 
   it("returns [] on network error", async () => {
