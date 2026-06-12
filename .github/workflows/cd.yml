@@ -50,23 +50,15 @@ jobs:
         run: npm test
         working-directory: extension
 
-      # wxt zip performs its own build, so the secrets must be set here.
-      - name: Build and zip extension
+      # No artifact is uploaded: builds with baked-in secrets must not be
+      # publicly downloadable. Distribution happens via the release workflow,
+      # which publishes to the private ytsummary-releases repo.
+      - name: Build
         env:
           WXT_AZURE_FUNCTION_URL: ${{ secrets.AZURE_FUNCTION_URL }}
           WXT_AZURE_FUNCTION_KEY: ${{ secrets.AZURE_FUNCTION_KEY }}
-        run: npm run zip
+        run: npm run build
         working-directory: extension
-
-      - name: Upload extension artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-${{ github.sha }}
-          path: extension/.output/*.zip
-          retention-days: 30
-          # .output is a hidden dir, excluded by upload-artifact v4 by default
-          include-hidden-files: true
-          if-no-files-found: error
 
   functions-ci:
     name: Functions CI
