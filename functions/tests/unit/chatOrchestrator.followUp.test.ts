@@ -8,6 +8,8 @@ vi.mock("openai", () => ({
 import { generateFollowUpPrompts } from "../../src/services/chatOrchestrator";
 import { AzureOpenAI } from "openai";
 
+type CompletionMessages = Array<{ role: string; content: string }>;
+
 const BASE_REQUEST: ChatRequest = {
   videoId: "abc12345678",
   videoTitle: "Test Video",
@@ -19,14 +21,22 @@ const BASE_REQUEST: ChatRequest = {
   mode: "follow-up-prompts",
 };
 
-function mockCompletion(content: string | null): ReturnType<typeof vi.fn> {
+function installCompletionMock(content: string | null) {
   const create = vi.fn().mockResolvedValue({
     choices: [{ message: { content } }],
   });
   (AzureOpenAI as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     chat: { completions: { create } },
   }));
-  return create;
+  const sentMessages = (): CompletionMessages => {
+    const callArgs = create.mock.calls[0] as [{ messages: CompletionMessages }];
+    return callArgs[0].messages;
+  };
+  const requestOptions = (): Record<string, unknown> => {
+    const callArgs = create.mock.calls[0] as [Record<string, unknown>];
+    return callArgs[0];
+  };
+  return { sentMessages, requestOptions };
 }
 
 describe("chatOrchestrator — generateFollowUpPrompts", () => {
@@ -38,12 +48,12 @@ describe("chatOrchestrator — generateFollowUpPrompts", () => {
   });
 
   it("returns the parsed array of follow-up prompts", async () => {
-    mockCompletion(JSON.stringify(["Q1?", "Q2?", "Q3?"]));
+    installCompletionMock(JSON.stringify(["Q1?", "Q2?", "Q3?"]));
     await expect(generateFollowUpPrompts(BASE_REQUEST)).resolves.toEqual(["Q1?", "Q2?", "Q3?"]);
   });
 
   it("sends the last assistant response as context", async () => {
-    const create = mockCompletion(JSON.stringify(["Q?"]));
+    const { sentMessages } = installCompletionMock(JSON.stringify(["Q?"]));
     const request: ChatRequest = {
       ...BASE_REQUEST,
       messages: [
@@ -56,15 +66,14 @@ describe("chatOrchestrator — generateFollowUpPrompts", () => {
 
     await generateFollowUpPrompts(request);
 
-    const call = create.mock.calls[0]![0] as { messages: Array<{ role: string; content: string }> };
-    const userMsg = call.messages.find((m) => m.role === "user");
+    const userMsg = sentMessages().find((m) => m.role === "user");
     expect(userMsg?.content).toContain("Latest answer.");
     expect(userMsg?.content).toContain("Test Video");
     expect(userMsg?.content).not.toContain("First answer.");
   });
 
   it("falls back to title-only context when no assistant message exists", async () => {
-    const create = mockCompletion(JSON.stringify(["Q?"]));
+    const { sentMessages } = installCompletionMock(JSON.stringify(["Q?"]));
     const request: ChatRequest = {
       ...BASE_REQUEST,
       messages: [{ role: "user", content: "Only a question?" }],
@@ -72,29 +81,28 @@ describe("chatOrchestrator — generateFollowUpPrompts", () => {
 
     await generateFollowUpPrompts(request);
 
-    const call = create.mock.calls[0]![0] as { messages: Array<{ role: string; content: string }> };
-    const userMsg = call.messages.find((m) => m.role === "user");
+    const userMsg = sentMessages().find((m) => m.role === "user");
     expect(userMsg?.content).toBe("Video: Test Video");
   });
 
   it("requests a non-streaming completion", async () => {
-    const create = mockCompletion(JSON.stringify(["Q?"]));
+    const { requestOptions } = installCompletionMock(JSON.stringify(["Q?"]));
     await generateFollowUpPrompts(BASE_REQUEST);
-    expect(create.mock.calls[0]![0]).toMatchObject({ stream: false });
+    expect(requestOptions()).toMatchObject({ stream: false });
   });
 
   it("throws when the model returns a JSON object instead of an array", async () => {
-    mockCompletion(JSON.stringify({ prompts: ["Q?"] }));
+    installCompletionMock(JSON.stringify({ prompts: ["Q?"] }));
     await expect(generateFollowUpPrompts(BASE_REQUEST)).rejects.toThrow("Expected JSON array");
   });
 
   it("throws when the model returns invalid JSON", async () => {
-    mockCompletion("not json at all");
+    installCompletionMock("not json at all");
     await expect(generateFollowUpPrompts(BASE_REQUEST)).rejects.toThrow();
   });
 
   it("returns an empty array when the model returns no content", async () => {
-    mockCompletion(null);
+    installCompletionMock(null);
     await expect(generateFollowUpPrompts(BASE_REQUEST)).resolves.toEqual([]);
   });
 });

@@ -14,6 +14,8 @@ describe("sidepanel main bootstrap", () => {
   });
 
   it("mounts the App into #root and applies the light theme by default", async () => {
+    // main.tsx renders outside the testing library, so act() does not apply
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false;
     await import("../../entrypoints/sidepanel/main");
 
     await waitFor(() =>

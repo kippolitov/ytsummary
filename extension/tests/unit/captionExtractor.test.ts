@@ -198,7 +198,9 @@ describe("captionExtractor entrypoint", () => {
     const nextVid = "vid00000011";
     setVideoUrl(vid);
     setPlayerResponse(vid, "https://yt.example/captions10");
-    vi.mocked(fetch).mockResolvedValue(new Response(TIMED_XML, { status: 200 }));
+    // a Response body is single-use; return a fresh one per call since every
+    // navigate listener registered by earlier main() invocations re-fetches
+    vi.mocked(fetch).mockImplementation(async () => new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
     await waitForTranscript(vid);
@@ -207,6 +209,6 @@ describe("captionExtractor entrypoint", () => {
     setPlayerResponse(nextVid, "https://yt.example/captions11");
     window.dispatchEvent(new Event("yt-navigate-finish"));
 
-    //expect(await waitForTranscript(nextVid)).toBe("Hello world");
+    expect(await waitForTranscript(nextVid)).toBe("Hello world");
   });
 });

@@ -79,6 +79,7 @@ describe("openaiOrchestrator — edge cases", () => {
     }));
 
     await orchestrateAnalysis(baseRequest);
-    expect(create.mock.calls[0]![0]).toMatchObject({ model: "gpt-4o-mini" });
+    const callArgs = create.mock.calls[0] as [{ model: string }];
+    expect(callArgs[0].model).toBe("gpt-4o-mini");
   });
 });
