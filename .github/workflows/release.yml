@@ -21,6 +21,9 @@ jobs:
   release:
     name: Build and Release Extension
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     env:
       TAG_NAME: ${{ inputs.tag_name || github.ref_name }}
     steps:
@@ -64,8 +67,10 @@ jobs:
         working-directory: extension
 
       - name: Unit tests
-        run: npm test
-        working-directory: extension
+        uses: ./.github/actions/unit-tests
+        with:
+          working-directory: extension
+          name: extension
 
       - name: Verify required secrets
         run: |
