@@ -99,6 +99,54 @@ jobs:
         run: npm run build
         working-directory: functions
 
+  # ── Coverage report → GitHub Pages ───────────────────────────────────────
+  publish-coverage:
+    name: Publish Coverage to Pages
+    runs-on: ubuntu-latest
+    needs: [extension-ci, functions-ci]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Download extension coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-test-coverage-reports
+          path: pages/extension
+
+      - name: Download functions coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: functions-test-coverage-reports
+          path: pages/functions
+
+      - name: Create index page
+        run: |
+          cat > pages/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head><meta charset="utf-8"><title>Coverage Reports</title></head>
+          <body>
+            <h1>Coverage Reports</h1>
+            <ul>
+              <li><a href="extension/coverage/">Extension</a></li>
+              <li><a href="functions/coverage/">Functions</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
   # ── Azure Functions deployment ────────────────────────────────────────────
   deploy-functions:
     name: Deploy Functions
