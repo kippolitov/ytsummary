@@ -17,6 +17,10 @@ inputs:
     description: Optional positional path filter passed to vitest (e.g. tests/unit)
     required: false
     default: ''
+  codecov-token:
+    description: Codecov upload token (CODECOV_TOKEN secret). Omit to skip upload.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -61,6 +65,15 @@ runs:
           console.log(`### Coverage: ${process.env.REPORT_NAME}\n`);
           console.log(`| Metric | % | Covered |\n| --- | --- | --- |\n${rows}\n`);
         ' >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload coverage to Codecov
+      if: ${{ !cancelled() && inputs.codecov-token != '' }}
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ inputs.codecov-token }}
+        files: ${{ inputs.working-directory }}/coverage/lcov.info
+        flags: ${{ inputs.name }}
+        fail_ci_if_error: false
 
     - name: Upload test and coverage reports
       if: ${{ !cancelled() }}

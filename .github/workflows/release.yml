@@ -71,6 +71,7 @@ jobs:
         with:
           working-directory: extension
           name: extension
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Verify required secrets
         run: |
