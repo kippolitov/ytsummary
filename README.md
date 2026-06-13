@@ -341,6 +341,10 @@ ytsummary/
 ```
 
 ---
+## Code Coverage badge
+
+[![codecov](https://codecov.io/github/kippolitov/ytsummary/graph/badge.svg?token=QO582HDYMS)](https://codecov.io/github/kippolitov/ytsummary)
+___
 
 ## Tech stack
 
