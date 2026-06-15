@@ -19,6 +19,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +42,6 @@ jobs:
         with:
           working-directory: extension
           name: extension
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build
         env:
@@ -56,6 +56,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -79,7 +80,6 @@ jobs:
           working-directory: functions
           name: functions
           test-filter: tests/unit
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build
         run: npm run build

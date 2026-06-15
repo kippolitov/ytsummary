@@ -24,6 +24,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      pull-requests: write
     env:
       TAG_NAME: ${{ inputs.tag_name || github.ref_name }}
     steps:
@@ -71,7 +72,6 @@ jobs:
         with:
           working-directory: extension
           name: extension
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Verify required secrets
         run: |
