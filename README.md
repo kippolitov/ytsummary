@@ -204,6 +204,8 @@ In Chrome:
 3. Click **Load unpacked**
 4. Select the `.output/chrome-mv3/` folder
 
+![Installing the extension](docs/extension-install.gif)
+
 ---
 
 ### 5. Use it
@@ -212,6 +214,8 @@ In Chrome:
 2. Click the extension icon in the Chrome toolbar to open the side panel
 3. Wait a few seconds for the summary to generate
 4. Switch to the **Chat** tab to ask questions or generate a blog post
+
+![Using the extension](docs/extension-use.gif)
 
 ---
 
