@@ -104,6 +104,10 @@ jobs:
     name: Publish Coverage to Pages
     runs-on: ubuntu-latest
     needs: [extension-ci, functions-ci]
+    # Prevent concurrent Pages deployments: only one can be in-flight at a time.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
