@@ -31,5 +31,5 @@
 
 ## Notes
 
-- All checklist items pass on first validation pass. No [NEEDS CLARIFICATION] markers were needed — reasonable defaults were used for the authorized-user-list management mechanism, session-expiry behavior, and multi-device conflict resolution, all documented in the Assumptions section.
-- Ready for `/speckit-clarify` (optional, to pressure-test the assumptions above) or directly for `/speckit-plan`.
+- All checklist items still pass after the 2026-07-06 clarification session (see spec.md's `## Clarifications` section). Four ambiguities were resolved and converted from soft assumptions into firm, testable requirements: saved chat history cap (FR-008a), saved-video count cap (FR-019), session duration (FR-006a/SC-008), and multi-device conflict resolution (FR-020).
+- Ready for `/speckit-plan` re-validation (plan.md/tasks.md predate this clarification session and should be checked against the four new/changed requirements) or `/speckit-tasks` refresh if the plan needs no changes.

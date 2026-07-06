@@ -8,6 +8,15 @@
 
 **Input**: User description: "Add the ability for users to save a video's summary and chat conversation so it persists indefinitely, instead of the current behavior where everything lives in chrome.storage.session and is lost the moment the browser closes. Users must sign in with their Google account before using any part of the extension — generating a summary, chatting about a video, or viewing saved history all require an authenticated session. Only Google accounts the developer has explicitly authorized may use the extension; anyone else attempting to sign in sees a clear message that access is invitation-only. Once signed in with an authorized account, the user gets a "Saved" view (similar in spirit to a reading-list) listing videos they've explicitly saved, each showing its summary and full chat history, restorable at any time. Saved data is scoped strictly to the signed-in user and available from any device/browser where they sign in with the same account. Unsaved videos continue to behave as they do today (session-only, cleared on browser close) — saving is an explicit user action, not automatic for every video viewed. The developer needs to add or remove authorized users without shipping a new extension version or redeploying the backend."
 
+## Clarifications
+
+### Session 2026-07-06
+
+- Q: SC-003 promises "complete chat message history" restored with 100% fidelity, but the existing codebase already caps live chat sessions at 50 messages. Should saved chat history preserve every message ever sent (unbounded), or inherit the same 50-message cap as today's live sessions? → A: Cap at 50 messages, matching existing live-session behavior; oldest messages drop first.
+- Q: Should there be a maximum number of videos a single user can have saved at once? → A: Cap at 200 per user; a user at the cap must remove an existing saved video before saving a new one.
+- Q: How long should a signed-in user remain authenticated before needing to interactively re-authenticate? → A: 30 days, as long as silent token refresh keeps succeeding; a failed silent refresh (e.g., past 30 days, or the underlying Google session ended) prompts an interactive sign-in.
+- Q: Should the tentative last-write-wins approach for the rare same-account, two-device concurrent edit be locked in as a firm requirement? → A: Yes, confirmed as a firm requirement — the most recent save overwrites the prior one, no merge or conflict UI.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Sign In With an Authorized Google Account (Priority: P1)
@@ -23,7 +32,7 @@ A new or returning user opens the extension and is presented with a sign-in prom
 1. **Given** the user has never signed in, **When** they open the extension, **Then** they are shown a sign-in prompt and cannot generate a summary, chat, or view saved history until they sign in.
 2. **Given** the user signs in with a Google account the developer has authorized, **When** sign-in completes, **Then** they are granted full access to the extension's features.
 3. **Given** the user signs in with a Google account the developer has NOT authorized, **When** sign-in completes, **Then** they see a clear message stating access is invitation-only, and they are not granted access to summary, chat, or saved-history features.
-4. **Given** a previously signed-in, authorized user closes and reopens the browser, **When** they open the extension, **Then** they remain signed in without needing to authenticate again (subject to standard session expiry).
+4. **Given** a previously signed-in, authorized user closes and reopens the browser, **When** they open the extension within 30 days of last use and silent token refresh succeeds, **Then** they remain signed in without needing to interactively authenticate again.
 5. **Given** a signed-in user, **When** they choose to sign out, **Then** they immediately lose access to summary, chat, and saved-history features until they sign in again.
 
 ---
@@ -98,8 +107,9 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 - What happens when a user is signed in and using the extension, but the developer revokes their authorization mid-session? The user's in-progress session should be cut off (denied further access) rather than allowed to continue indefinitely on stale authorization.
 - What happens when a user tries to save a video while offline or when the save operation fails partway through? The user should see a clear failure indication and the video should not be left in an ambiguous or partially-saved state; unsaved content continues to behave as session-only.
 - What happens when a user saves a video, then later deletes/unsaves it, then tries to save it again? The system should treat this as a fresh save rather than resurrecting old data.
-- What happens when a user has a very large number of saved videos or a very long chat history on one saved video? The Saved view and restore experience should remain usable (e.g., through reasonable list handling) rather than failing or becoming unresponsive.
-- What happens when the same Google account is signed in on two devices simultaneously and saves/unsaves happen concurrently? The system should converge to a consistent state without silently losing one device's changes.
+- What happens when a user reaches the 200-saved-video cap and tries to save another? The save is rejected with a clear message telling them to remove an existing saved video first (FR-019).
+- What happens when a saved video's chat history exceeds 50 messages? Only the most recent 50 are preserved, matching today's live-session cap; older messages are dropped from the saved copy (FR-008a).
+- What happens when the same Google account is signed in on two devices simultaneously and saves/unsaves happen concurrently? The most recent write wins outright — no merge or conflict prompt (FR-020).
 - What happens when an unauthorized user repeatedly attempts to sign in? They should consistently see the invitation-only message rather than being granted access through retries.
 - What happens to a user's saved data if their account is later removed from the authorized list? Saved data is retained (not deleted) so access can be restored if the account is re-authorized later; the user simply cannot reach it while unauthorized.
 
@@ -113,8 +123,10 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 - **FR-004**: System MUST show a clear, plain-language message to users whose Google account is not authorized, communicating that access is invitation-only, without exposing any extension functionality to them.
 - **FR-005**: System MUST allow the developer to add or remove authorized Google accounts at any time, with changes taking effect without publishing a new extension version and without redeploying the backend.
 - **FR-006**: System MUST re-check a user's authorization status such that a revoked account loses access promptly (within the same session or on next action), not merely on their next fresh sign-in.
+- **FR-006a**: System MUST keep a signed-in, authorized user's session active for up to 30 days without requiring interactive re-authentication, provided silent session renewal continues to succeed; when renewal fails (including after 30 days of inactivity), the user MUST be prompted to sign in again before regaining access.
 - **FR-007**: System MUST allow a signed-in, authorized user to explicitly save a video's current summary and chat conversation as a distinct action, separate from simply viewing it.
 - **FR-008**: System MUST persist saved summaries and chat histories indefinitely (i.e., not subject to browser-session expiry) until the user explicitly removes them.
+- **FR-008a**: System MUST cap a saved video's persisted chat history at the most recent 50 messages, matching the existing live-session cap; when a save would exceed this, the oldest messages are dropped first rather than the save failing.
 - **FR-009**: System MUST continue to treat unsaved videos exactly as today: their summary and chat live only for the current browser session and are cleared when the browser closes.
 - **FR-010**: System MUST scope all saved data strictly to the signed-in user's account, such that no user can view or restore another user's saved videos.
 - **FR-011**: System MUST make a user's saved videos, summaries, and chat histories available whenever that same Google account signs in, regardless of device or browser.
@@ -125,13 +137,15 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 - **FR-016**: System MUST indicate, when a user is viewing a video they have already saved, that it is saved (rather than presenting it as unsaved).
 - **FR-017**: System MUST present a clear empty state in the Saved view when a user has not yet saved any videos.
 - **FR-018**: System MUST handle a failed save attempt by informing the user the save did not complete, without leaving the video in an inconsistent state.
+- **FR-019**: System MUST cap the number of videos a single user can have saved at once at 200; when a user at the cap attempts to save an additional video, the system MUST reject the save with a clear message directing them to remove an existing saved video first.
+- **FR-020**: System MUST resolve concurrent saves/updates to the same saved video from two devices signed in with the same account via last-write-wins (the most recent write overwrites the prior one) without merge logic or a conflict-resolution prompt.
 
 ### Key Entities
 
 - **User Account**: Represents an authenticated individual, identified by their Google account. Tracks authorization status (authorized vs. not) and owns zero or more Saved Videos.
 - **Authorized User List**: The developer-managed set of Google accounts permitted to use the extension. Independent of extension deployment; changes apply live.
-- **Saved Video**: A video a user has explicitly chosen to persist. Includes the video's identity (e.g., title, channel, source link), its summary content, and its full chat history. Owned by exactly one User Account; persists indefinitely until removed by that user.
-- **Chat History**: An ordered sequence of chat messages exchanged about a specific video. Exists transiently for unsaved videos (session-scoped) and durably for Saved Videos (persisted, appendable after saving).
+- **Saved Video**: A video a user has explicitly chosen to persist. Includes the video's identity (e.g., title, channel, source link), its summary content, and its chat history. Owned by exactly one User Account; persists indefinitely until removed by that user. A single account may own at most 200 Saved Videos at once (FR-019).
+- **Chat History**: An ordered sequence of chat messages exchanged about a specific video, capped at the most recent 50 messages once saved (FR-008a). Exists transiently for unsaved videos (session-scoped) and durably for Saved Videos (persisted, appendable after saving).
 
 ## Success Criteria *(mandatory)*
 
@@ -139,11 +153,12 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 
 - **SC-001**: 100% of extension features (summary generation, chat, saved history) are inaccessible to any user who has not completed sign-in.
 - **SC-002**: 100% of sign-in attempts from Google accounts not on the authorized list result in the invitation-only message and no feature access, with zero exceptions.
-- **SC-003**: A user can save a video's summary and chat, close and fully quit their browser, reopen it, sign in, and find that saved content restored with 100% fidelity (identical summary text and complete chat message history).
+- **SC-003**: A user can save a video's summary and chat, close and fully quit their browser, reopen it, sign in, and find that saved content restored with 100% fidelity — identical summary text and identical chat message history up to the 50-message saved cap (FR-008a).
 - **SC-004**: A user can access their previously saved videos from a different device/browser after signing in with the same account, with the same content available there within a few seconds of opening the Saved view.
 - **SC-005**: The developer can grant or revoke access for a Google account and have that decision take effect for the affected user without any new extension release or backend redeployment being required.
 - **SC-006**: Saving a video is never triggered automatically; across normal usage, only videos a user explicitly marks as saved appear in their Saved view.
 - **SC-007**: Users can locate and restore any of their saved videos from the Saved view in a small, bounded number of interactions (e.g., open Saved view, select the video).
+- **SC-008**: A signed-in, authorized user who returns within 30 days is not asked to interactively re-authenticate, provided silent session renewal succeeds.
 
 ## Assumptions
 
@@ -151,6 +166,5 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 - The developer manages the authorized-account list through some form of configuration or admin mechanism that is external to the extension's shipped code and the backend's deployed artifact — the specific mechanism is an implementation detail decided during planning, not this specification.
 - "Persists indefinitely" means saved data is retained until the user explicitly unsaves it; it is not automatically expired or purged by the system.
 - Saved data belonging to a user whose authorization is later revoked is retained (not deleted) in case the developer re-authorizes them later; a fully separate data-deletion request is out of scope for this feature.
-- Standard session-expiry/re-authentication behavior (e.g., needing to sign in again after a long period of inactivity) is acceptable and does not need special handling beyond what's typical for Google-account sign-in.
 - The existing session-only behavior for unsaved videos (cleared on browser close) is unchanged by this feature and remains the default for any video the user does not explicitly save.
-- Multi-device concurrent editing (Edge Cases) is expected to be rare; last-write-wins or an equivalent simple conflict resolution is an acceptable default unless refined during planning.
+- Multi-device concurrent editing (Edge Cases) is expected to be rare; last-write-wins is now a firm requirement (FR-020), not merely a fallback assumption.
