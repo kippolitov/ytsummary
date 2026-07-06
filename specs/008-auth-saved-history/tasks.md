@@ -90,19 +90,19 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Unit tests for `savedVideosStore` create/update and chat-history chunking (data-model.md §5) in `functions/tests/unit/savedVideosStore.test.ts`
-- [ ] T023 [P] [US2] Unit tests for the save-or-update (`PUT`) and get-one (`GET /{videoId}`) handlers in `functions/tests/unit/savedVideos.handler.test.ts`
-- [ ] T024 [P] [US2] Integration test: save-or-update then get-one round trip against Azurite in `functions/tests/integration/savedVideos.test.ts`
-- [ ] T025 [P] [US2] Unit tests for `savedVideosClient.ts` save/get functions in `extension/tests/unit/savedVideosClient.test.ts`
-- [ ] T026 [P] [US2] Unit tests for `SaveButton` (idle, saving, saved, error states) in `extension/tests/unit/SaveButton.test.tsx`
+- [ ] T022 [P] [US2] Unit tests for `savedVideosStore` create/update, chat-history chunking (data-model.md §5), and the 200-per-account cap check — create rejected at 200 existing rows, update never rejected (FR-019) — in `functions/tests/unit/savedVideosStore.test.ts`
+- [ ] T023 [P] [US2] Unit tests for the save-or-update (`PUT`) and get-one (`GET /{videoId}`) handlers, including a `409 saved-video-limit-reached` response when a create would exceed the cap, in `functions/tests/unit/savedVideos.handler.test.ts`
+- [ ] T024 [P] [US2] Integration test: save-or-update then get-one round trip against Azurite, plus a cap-boundary case (200 existing rows → 201st create rejected, existing-row update still succeeds), in `functions/tests/integration/savedVideos.test.ts`
+- [ ] T025 [P] [US2] Unit tests for `savedVideosClient.ts` save/get functions, including mapping the `saved-video-limit-reached` error, in `extension/tests/unit/savedVideosClient.test.ts`
+- [ ] T026 [P] [US2] Unit tests for `SaveButton` (idle, saving, saved, error, and limit-reached states) in `extension/tests/unit/SaveButton.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Add `SavedVideo` request/response types, type guards, and the `not-found` `FunctionError` code in `functions/src/models/index.ts` (depends on T004)
-- [ ] T028 [US2] Implement create/update/get-one in `functions/src/services/savedVideosStore.ts` per data-model.md, including chat-history chunking (depends on T027)
-- [ ] T029 [US2] Register `PUT /api/saved-videos/{videoId}` and `GET /api/saved-videos/{videoId}`, each wrapped in `withAuth`, in `functions/src/auth/index.ts` (depends on T028, T006)
-- [ ] T030 [P] [US2] Implement `saveVideo()` and `getSavedVideo()` in `extension/services/savedVideosClient.ts` (depends on T029, T008)
-- [ ] T031 [US2] Implement `extension/components/Saved/SaveButton.tsx` with a saved-state indicator and non-blocking failure messaging (depends on T030)
+- [ ] T027 [P] [US2] Add `SavedVideo` request/response types, type guards, and the `not-found`/`saved-video-limit-reached` `FunctionError` codes in `functions/src/models/index.ts` (depends on T004)
+- [ ] T028 [US2] Implement create/update/get-one in `functions/src/services/savedVideosStore.ts` per data-model.md, including chat-history chunking and the 200-per-account cap check (`RowKey`-only partition count, create-only, FR-019) (depends on T027)
+- [ ] T029 [US2] Register `PUT /api/saved-videos/{videoId}` and `GET /api/saved-videos/{videoId}`, each wrapped in `withAuth`, returning `409 saved-video-limit-reached` when the store rejects a capped create, in `functions/src/auth/index.ts` (depends on T028, T006)
+- [ ] T030 [P] [US2] Implement `saveVideo()` and `getSavedVideo()` in `extension/services/savedVideosClient.ts`, mapping `409 saved-video-limit-reached` to a distinct error the UI can special-case (depends on T029, T008)
+- [ ] T031 [US2] Implement `extension/components/Saved/SaveButton.tsx` with a saved-state indicator and non-blocking failure messaging, including a specific "remove a saved video first" message for the limit-reached case (depends on T030)
 - [ ] T032 [US2] Wire `SaveButton` into the Summary and Chat views (`extension/components/KnowledgePanel/KnowledgePanel.tsx`, `extension/components/Chat/ChatPanel.tsx`) (depends on T031)
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
