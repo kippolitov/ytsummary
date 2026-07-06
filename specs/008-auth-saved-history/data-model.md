@@ -39,8 +39,10 @@ A user's explicitly saved videos. Partitioned per user so listing a user's saved
 
 **Validation rules**:
 - `PartitionKey` MUST equal the authenticated caller's `sub` on every read/write/delete — enforced in the handler, never taken from the request body, so no caller can address another user's partition (FR-010).
-- `chatJson0..3` concatenation, when non-empty, MUST parse as a JSON array of `ChatMessage`; if the array would exceed the existing 50-message cap, the oldest messages are dropped first (same policy as `chatCache.ts`'s `MAX_MESSAGES`), consistent with FR-018 (never leave a save in an inconsistent state — a save that would overflow storage limits truncates rather than fails).
+- `chatJson0..3` concatenation, when non-empty, MUST parse as a JSON array of `ChatMessage`, capped at the most recent 50 messages (FR-008a) — matching `chatCache.ts`'s `MAX_MESSAGES`; oldest messages are dropped first when a save would exceed this, consistent with FR-018 (never leave a save in an inconsistent state — a save that would overflow the cap truncates rather than fails).
 - A `SavedVideo` entity's absence for a given `(sub, videoId)` pair is the "not saved" state (FR-016 relies on this presence check).
+- **Per-account cap (FR-019)**: a `PUT` that would *create* a new row (i.e., no existing `(sub, videoId)` entity) MUST be rejected if the caller's partition already contains 200 entities. Checked by querying the partition selecting only `RowKey` (cheap — no need to deserialize `summaryJson`/`chatJson*`) and counting results; an update to an *already-saved* video never counts against the cap and is never rejected on this basis. A small race is possible if two creates for the same account land concurrently right at the boundary (the partition could briefly hold 201 rows); this is accepted as a rare, low-consequence overshoot rather than adding cross-request locking for a soft, user-facing limit.
+- **Conflict resolution (FR-020)**: no ETag/optimistic-concurrency check is performed on write — a `PUT` or `DELETE` unconditionally applies to the current row. This is a deliberate, minimal implementation of last-write-wins: the entity's `updatedAt` simply reflects whichever write landed last across any number of devices.
 
 **State transitions**:
 - *(none)* → **saved**: created by the "Save" action (US2), `savedAt = updatedAt = now`.

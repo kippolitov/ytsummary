@@ -71,7 +71,7 @@ Note: list responses omit `summaryJson`/chat content (kept small for the Saved-v
 
 Idempotent upsert: first call creates (`savedAt` set), subsequent calls update (`savedAt` preserved, `updatedAt` refreshed) — this is how "continue chatting after saving persists new messages" (FR-015) is implemented: the client re-PUTs with the full current message list after each new message on an already-saved video.
 
-**Response** `200` on success (echoes the same shape as "get one"); `400` for malformed body (mirrors `isAnalyzeRequest`/`isChatRequest`-style validation already used elsewhere); `500`/`503` on storage failure, mapped client-side to the "save did not complete" state (FR-018) without partial local state changes.
+**Response** `200` on success (echoes the same shape as "get one"); `400` for malformed body (mirrors `isAnalyzeRequest`/`isChatRequest`-style validation already used elsewhere); `409` (`{ "error": { "code": "saved-video-limit-reached", "message": "…remove a saved video before saving another." } }`) when this would create a new saved video (no existing row for this `videoId` under this account) and the account already has 200 saved videos (FR-019) — this check never applies to updating an already-saved video; `500`/`503` on storage failure, mapped client-side to the "save did not complete" state (FR-018) without partial local state changes.
 
 ## Delete (unsave) a video
 
@@ -81,4 +81,4 @@ Idempotent upsert: first call creates (`savedAt` set), subsequent calls update (
 
 ## Error envelope
 
-All error responses use the existing `FunctionError` shape: `{ "error": { "code": string, "message": string } }`, extending today's `functions/src/models/index.ts` codes with `not-found` for this API's `404`s.
+All error responses use the existing `FunctionError` shape: `{ "error": { "code": string, "message": string } }`, extending today's `functions/src/models/index.ts` codes with `not-found` for this API's `404`s and `saved-video-limit-reached` for its `409`s.

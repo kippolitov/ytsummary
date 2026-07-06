@@ -33,6 +33,8 @@
 9. **Expected**: the new message is present (FR-015).
 10. Remove the video from the Saved view.
 11. **Expected**: it no longer appears in the list (FR-014); re-saving the same video afterward starts fresh (per Assumptions in spec.md).
+12. (Cap check, FR-019) With 200 videos already saved on a test account, attempt to save a 201st.
+13. **Expected**: the save is rejected with a clear message to remove a saved video first; updating one of the 200 already-saved videos still works normally.
 
 ## Validating User Story 4 — cross-device (P3)
 
