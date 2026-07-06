@@ -83,7 +83,8 @@ extension/
 ├── hooks/
 │   └── useAuth.ts                          (new — exposes sign-in state + sign-in/out actions to components)
 ├── types/
-│   └── auth.ts                             (new — AuthState, AuthenticatedUser, SavedVideoSummary types)
+│   ├── auth.ts                             (new — AuthState, AuthenticatedUser types)
+│   └── index.ts                            (modified — add SavedVideoSummary and SavedVideoDetail types, mirroring contracts/saved-videos-api.md's list/get-one response shapes, alongside the existing AnalysisResult/Video types)
 └── wxt.config.ts                           (modified — add "identity" permission, WXT_GOOGLE_OAUTH_CLIENT_ID define)
 
 functions/
