@@ -40,7 +40,7 @@
 
 1. With the video saved from a first browser profile/machine, sign in with the same Google account in a second, separate browser profile.
 2. Open the Saved view there.
-3. **Expected**: the same saved video, summary, and chat history are present within a few seconds (SC-004).
+3. **Expected**: the same saved video, summary, and chat history are present within 5 seconds (SC-004).
 
 ## Validating User Story 5 — authorized-user management (P3)
 

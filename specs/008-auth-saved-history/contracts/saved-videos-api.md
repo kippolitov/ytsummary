@@ -26,7 +26,7 @@ Base route: `/api/saved-videos`
 }
 ```
 
-Note: list responses omit `summaryJson`/chat content (kept small for the Saved-view list UI, FR-012); full content is fetched via the "get one" route below when the user selects a video (FR-013). Empty `videos: []` is a normal, valid response (FR-017 empty state is a client-side concern, not an error).
+Note: list responses omit `summaryJson`/chat content (kept small for the Saved-view list UI, FR-012); full content is fetched via the "get one" route below when the user selects a video (FR-013). Empty `videos: []` is a normal, valid response (FR-017 empty state is a client-side concern, not an error). Client-side, each list entry is typed as `SavedVideoSummary` (`extension/types/index.ts`).
 
 ## Get one saved video
 
@@ -48,7 +48,7 @@ Note: list responses omit `summaryJson`/chat content (kept small for the Saved-v
 }
 ```
 
-`summary` uses the existing `AnalysisResult` shape; `messages` uses the existing `ChatMessage[]` shape — both unchanged from what the client already renders today (research.md §7).
+`summary` uses the existing `AnalysisResult` shape; `messages` uses the existing `ChatMessage[]` shape — both unchanged from what the client already renders today (research.md §7). Client-side, this whole response is typed as `SavedVideoDetail` (`extension/types/index.ts`).
 
 **Response** `404` — no saved video for this `videoId` under this account (`{ "error": { "code": "not-found", "message": "…" } }`).
 

@@ -154,7 +154,7 @@ The developer adds a new Google account to the authorized list (e.g., to invite 
 - **SC-001**: 100% of extension features (summary generation, chat, saved history) are inaccessible to any user who has not completed sign-in.
 - **SC-002**: 100% of sign-in attempts from Google accounts not on the authorized list result in the invitation-only message and no feature access, with zero exceptions.
 - **SC-003**: A user can save a video's summary and chat, close and fully quit their browser, reopen it, sign in, and find that saved content restored with 100% fidelity — identical summary text and identical chat message history up to the 50-message saved cap (FR-008a).
-- **SC-004**: A user can access their previously saved videos from a different device/browser after signing in with the same account, with the same content available there within a few seconds of opening the Saved view.
+- **SC-004**: A user can access their previously saved videos from a different device/browser after signing in with the same account, with the same content available there within 5 seconds of opening the Saved view.
 - **SC-005**: The developer can grant or revoke access for a Google account and have that decision take effect for the affected user without any new extension release or backend redeployment being required.
 - **SC-006**: Saving a video is never triggered automatically; across normal usage, only videos a user explicitly marks as saved appear in their Saved view.
 - **SC-007**: Users can locate and restore any of their saved videos from the Saved view in a small, bounded number of interactions (e.g., open Saved view, select the video).
