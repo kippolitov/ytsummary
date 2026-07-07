@@ -17,7 +17,7 @@ export default defineConfig({
     name: "Video Knowledge Panel",
     description:
       "Displays a structured knowledge panel alongside YouTube videos",
-    permissions: ["sidePanel", "storage", "scripting", "activeTab"],
+    permissions: ["sidePanel", "storage", "scripting", "activeTab", "identity"],
     side_panel: {
       default_path: "sidepanel.html",
     },
@@ -30,6 +30,9 @@ export default defineConfig({
       ),
       WXT_AZURE_FUNCTION_KEY: JSON.stringify(
         process.env.WXT_AZURE_FUNCTION_KEY ?? ""
+      ),
+      WXT_GOOGLE_OAUTH_CLIENT_ID: JSON.stringify(
+        process.env.WXT_GOOGLE_OAUTH_CLIENT_ID ?? ""
       ),
     },
   }),

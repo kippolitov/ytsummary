@@ -14,6 +14,11 @@ vi.mock("../../services/sessionCache", () => ({
   getLastVideo: vi.fn(),
   storeVideo: vi.fn(),
 }));
+vi.mock("../../services/authClient", () => ({
+  getStoredAuth: vi.fn(),
+  signInSilently: vi.fn(),
+  signOut: vi.fn(),
+}));
 
 import { postAnalysis } from "../../services/analysisClient";
 import {
@@ -24,6 +29,7 @@ import {
   getLastVideo,
   storeVideo,
 } from "../../services/sessionCache";
+import { getStoredAuth, signInSilently, signOut as authSignOut } from "../../services/authClient";
 
 type MessageListener = (
   message: ExtensionMessage,
@@ -50,6 +56,7 @@ const result: AnalysisResult = {
 };
 
 let listener: MessageListener;
+let ensureFreshAuth: () => Promise<void>;
 
 function sentMessages(): ExtensionMessage[] {
   return (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.map(
@@ -72,9 +79,11 @@ beforeAll(async () => {
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 
-  const entrypoint = (await import("../../entrypoints/background")).default as {
-    main: () => void;
-  };
+  vi.mocked(getStoredAuth).mockResolvedValue(null);
+
+  const module = await import("../../entrypoints/background");
+  const entrypoint = module.default as { main: () => void };
+  ensureFreshAuth = module.ensureFreshAuth;
   entrypoint.main();
 
   const addListener = chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>;
@@ -248,5 +257,64 @@ describe("background entrypoint", () => {
       expect(chrome.runtime.sendMessage).toHaveBeenCalled()
     );
     // no unhandled rejection — reaching this point is the assertion
+  });
+
+  describe("ensureFreshAuth (FR-006a)", () => {
+    beforeEach(() => {
+      vi.mocked(getStoredAuth).mockReset();
+      vi.mocked(signInSilently).mockReset();
+      vi.mocked(authSignOut).mockReset().mockResolvedValue(undefined);
+    });
+
+    it("does nothing when there is no existing session to refresh", async () => {
+      vi.mocked(getStoredAuth).mockResolvedValue(null);
+
+      await ensureFreshAuth();
+
+      expect(signInSilently).not.toHaveBeenCalled();
+      expect(authSignOut).not.toHaveBeenCalled();
+    });
+
+    it("does nothing when the stored token is not close to expiry", async () => {
+      vi.mocked(getStoredAuth).mockResolvedValue({
+        idToken: "t",
+        expiresAt: Date.now() + 60 * 60 * 1000,
+        user: { sub: "s", email: "e@x.com" },
+        authorizationStatus: "authorized",
+      });
+
+      await ensureFreshAuth();
+
+      expect(signInSilently).not.toHaveBeenCalled();
+    });
+
+    it("silently renews a token nearing expiry", async () => {
+      vi.mocked(getStoredAuth).mockResolvedValue({
+        idToken: "t",
+        expiresAt: Date.now() + 1000,
+        user: { sub: "s", email: "e@x.com" },
+        authorizationStatus: "authorized",
+      });
+      vi.mocked(signInSilently).mockResolvedValue({ sub: "s", email: "e@x.com" });
+
+      await ensureFreshAuth();
+
+      expect(signInSilently).toHaveBeenCalled();
+      expect(authSignOut).not.toHaveBeenCalled();
+    });
+
+    it("falls back to requiring an interactive sign-in when silent renewal fails", async () => {
+      vi.mocked(getStoredAuth).mockResolvedValue({
+        idToken: "t",
+        expiresAt: Date.now() - 1000,
+        user: { sub: "s", email: "e@x.com" },
+        authorizationStatus: "authorized",
+      });
+      vi.mocked(signInSilently).mockResolvedValue(null);
+
+      await ensureFreshAuth();
+
+      expect(authSignOut).toHaveBeenCalledTimes(1);
+    });
   });
 });

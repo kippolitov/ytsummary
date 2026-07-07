@@ -157,13 +157,16 @@ Create `functions/local.settings.json`:
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AZURE_OPENAI_ENDPOINT": "https://<your-resource>.openai.azure.com",
     "AZURE_OPENAI_API_KEY": "<your-api-key>",
-    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini"
+    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini",
+    "GOOGLE_OAUTH_CLIENT_ID": "<your-google-oauth-client-id>"
   },
   "Host": {
     "CORS": "*"
   }
 }
 ```
+
+`AzureWebJobsStorage` also backs two new Table Storage tables used for sign-in and saved history — `AllowedUsers` and `SavedVideos` — created automatically on first use against the same storage account (or Azurite locally, no separate setup needed). `GOOGLE_OAUTH_CLIENT_ID` is the OAuth 2.0 Client ID from Google Cloud Console (see step 3) — the backend verifies every request's ID token was issued for this audience.
 
 Start the function locally:
 
@@ -178,14 +181,24 @@ func start
 
 ### 3. Configure the extension
 
+In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth 2.0 Client ID (type: Web application) and add the extension's `chrome.identity.getRedirectURL()` value (`https://<extension-id>.chromiumapp.org/`) as an authorized redirect URI. Use the resulting client ID as both `WXT_GOOGLE_OAUTH_CLIENT_ID` below and `GOOGLE_OAUTH_CLIENT_ID` above.
+
 Create `extension/.env.local`:
 
 ```sh
 WXT_AZURE_FUNCTION_URL=http://localhost:7071/api/analyze
 WXT_AZURE_FUNCTION_KEY=
+WXT_GOOGLE_OAUTH_CLIENT_ID=<your-google-oauth-client-id>
 ```
 
 For a deployed Azure Function App, replace the URL with your function app URL and set the function key.
+
+Then authorize at least your own account to sign in (no one can use the extension until they're on this list):
+
+```sh
+cd functions
+npm run allowed-users -- add you@example.com
+```
 
 ---
 
@@ -297,12 +310,16 @@ Then deploy via Azure CLI or the Azure Portal. Set these application settings on
 | `AZURE_OPENAI_ENDPOINT` | Your Azure OpenAI endpoint URL |
 | `AZURE_OPENAI_API_KEY` | Your API key |
 | `AZURE_OPENAI_DEPLOYMENT` | Deployment name (e.g. `gpt-4o-mini`) |
+| `GOOGLE_OAUTH_CLIENT_ID` | The Google OAuth 2.0 Client ID from step 3 of setup |
+
+`AllowedUsers` and `SavedVideos` reuse the Function App's existing storage account (`AzureWebJobsStorage`) — no new resource to provision.
 
 Then update `extension/.env.local` to point at your deployed URL:
 
 ```sh
 WXT_AZURE_FUNCTION_URL=https://<your-app>.azurewebsites.net/api/analyze
 WXT_AZURE_FUNCTION_KEY=<your-function-key>
+WXT_GOOGLE_OAUTH_CLIENT_ID=<your-google-oauth-client-id>
 ```
 
 Rebuild the extension (`npm run build`) and reload it in Chrome.

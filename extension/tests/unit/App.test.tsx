@@ -14,9 +14,21 @@ vi.mock("../../components/Chat/ChatPanel", () => ({
     <div data-testid="chat-panel">chat:{videoId}</div>
   ),
 }));
+vi.mock("../../components/Saved/SavedList", () => ({
+  SavedList: () => <div data-testid="saved-list">saved list</div>,
+}));
+vi.mock("../../components/Saved/SavedVideoDetail", () => ({
+  SavedVideoDetail: ({ videoId }: { videoId: string }) => (
+    <div data-testid="saved-video-detail">saved detail:{videoId}</div>
+  ),
+}));
+vi.mock("../../hooks/useAuth", () => ({
+  useAuth: vi.fn(),
+}));
 
 import { App } from "../../entrypoints/sidepanel/App";
 import { getLastVideo, getResult } from "../../services/sessionCache";
+import { useAuth } from "../../hooks/useAuth";
 
 const result: AnalysisResult = {
   videoId: "abc12345678",
@@ -47,6 +59,12 @@ describe("App", () => {
     localStorage.clear();
     vi.mocked(getLastVideo).mockResolvedValue(null);
     vi.mocked(getResult).mockResolvedValue(null);
+    vi.mocked(useAuth).mockReturnValue({
+      status: "signed-in",
+      user: { sub: "123", email: "user@example.com" },
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    });
   });
 
   it("renders the idle state when no video has been visited", async () => {
@@ -213,5 +231,47 @@ describe("App", () => {
     await waitFor(() =>
       expect(chrome.runtime.onMessage.removeListener).toHaveBeenCalled()
     );
+  });
+
+  it("hides Summary/Chat and shows the sign-in prompt when signed out", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      status: "signed-out",
+      user: null,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("Sign in with Google to use this extension")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+  });
+
+  it("shows a sign-out control when signed in and calls signOut on click", async () => {
+    const signOut = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      status: "signed-in",
+      user: { sub: "123", email: "user@example.com" },
+      signIn: vi.fn(),
+      signOut,
+    });
+
+    render(<App />);
+    await screen.findByText("Open a YouTube video");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches to the Saved tab and shows the saved list", async () => {
+    render(<App />);
+    await screen.findByText("Open a YouTube video");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: "Saved" }));
+
+    expect(screen.getByTestId("saved-list")).toBeInTheDocument();
+    expect(screen.queryByText("Open a YouTube video")).not.toBeInTheDocument();
   });
 });

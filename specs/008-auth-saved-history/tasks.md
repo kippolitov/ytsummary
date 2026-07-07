@@ -29,9 +29,9 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 **Purpose**: Add the new dependencies and configuration both projects need before any feature code is written.
 
-- [ ] T001 [P] Add `google-auth-library` and `@azure/data-tables` to `functions/package.json` dependencies and `azurite` to `functions/package.json` devDependencies; run install
-- [ ] T002 [P] Add the `identity` permission and a `WXT_GOOGLE_OAUTH_CLIENT_ID` Vite `define` (mirroring the existing `WXT_AZURE_FUNCTION_URL` pattern) to `extension/wxt.config.ts`
-- [ ] T003 [P] Add an Azurite start/stop test helper for Table Storage integration tests in `functions/tests/integration/tableStorageTestHelper.ts`
+- [X] T001 [P] Add `google-auth-library` and `@azure/data-tables` to `functions/package.json` dependencies and `azurite` to `functions/package.json` devDependencies; run install
+- [X] T002 [P] Add the `identity` permission and a `WXT_GOOGLE_OAUTH_CLIENT_ID` Vite `define` (mirroring the existing `WXT_AZURE_FUNCTION_URL` pattern) to `extension/wxt.config.ts`
+- [X] T003 [P] Add an Azurite start/stop test helper for Table Storage integration tests in `functions/tests/integration/tableStorageTestHelper.ts`
 
 ---
 
@@ -41,12 +41,12 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Add `AuthenticatedUser` type and `unauthenticated`/`not-authorized` `FunctionError` codes in `functions/src/models/index.ts`
-- [ ] T005 [P] Implement the `AllowedUsers` table read helper (`isAllowed(email): Promise<boolean>`, populate/read `sub`) in `functions/src/services/allowedUsersStore.ts`
-- [ ] T006 Implement Google ID-token verification (via `google-auth-library`'s `verifyIdToken`) and the shared `withAuth(handler)` middleware in `functions/src/services/auth.ts` (depends on T004, T005)
-- [ ] T007 [P] Create `extension/types/auth.ts` with `AuthState` and `AuthenticatedUser` types
-- [ ] T008 Implement Google sign-in via `chrome.identity.launchWebAuthFlow` (response_type=id_token, nonce, redirect via `chrome.identity.getRedirectURL()`) with token + expiry persisted in `chrome.storage.local` in `extension/services/authClient.ts` (depends on T007)
-- [ ] T009 Implement `extension/hooks/useAuth.ts` exposing sign-in state and sign-in/sign-out actions (depends on T008)
+- [X] T004 [P] Add `AuthenticatedUser` type and `unauthenticated`/`not-authorized` `FunctionError` codes in `functions/src/models/index.ts`
+- [X] T005 [P] Implement the `AllowedUsers` table read helper (`isAllowed(email): Promise<boolean>`, populate/read `sub`) in `functions/src/services/allowedUsersStore.ts`
+- [X] T006 Implement Google ID-token verification (via `google-auth-library`'s `verifyIdToken`) and the shared `withAuth(handler)` middleware in `functions/src/services/auth.ts` (depends on T004, T005)
+- [X] T007 [P] Create `extension/types/auth.ts` with `AuthState` and `AuthenticatedUser` types
+- [X] T008 Implement Google sign-in via `chrome.identity.launchWebAuthFlow` (response_type=id_token, nonce, redirect via `chrome.identity.getRedirectURL()`) with token + expiry persisted in `chrome.storage.local` in `extension/services/authClient.ts` (depends on T007)
+- [X] T009 Implement `extension/hooks/useAuth.ts` exposing sign-in state and sign-in/sign-out actions (depends on T008)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin.
 
@@ -62,25 +62,25 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 > Write these first; confirm they fail before implementing.
 
-- [ ] T010 [P] [US1] Unit tests for `withAuth` (missing/malformed/expired/invalid-signature token, unverified email, account not in `AllowedUsers` — including a previously-authorized account subsequently removed, FR-006 — and the happy path) in `functions/tests/unit/auth.test.ts`
-- [ ] T011 [P] [US1] Integration test: `analyze` and `chat` endpoints reject missing/invalid/unauthorized bearer tokens before any OpenAI call, and accept authorized ones, using recorded JWT fixtures + a stubbed JWKS response and an Azurite-backed `AllowedUsers` table, in `functions/tests/integration/auth.test.ts`
-- [ ] T012 [P] [US1] Unit tests for `SignInGate` states (signed-out prompt, invitation-only message, authorized children render) in `extension/tests/unit/SignInGate.test.tsx`
-- [ ] T013 [P] [US1] E2E test: unauthenticated user sees the sign-in prompt and cannot reach Summary/Chat; an unauthorized account sees the invitation-only message, in `extension/tests/e2e/signIn.test.ts`
-- [ ] T014 [P] [US1] Unit tests for `authClient.ts`: expiry calculation from the decoded ID token, successful silent (`interactive: false`) renewal updating the stored token, and falling back to signaling an interactive sign-in is required when silent renewal fails (FR-006a/SC-008), in `extension/tests/unit/authClient.test.ts`
-- [ ] T015 [P] [US1] Extend `extension/tests/unit/background.test.ts` to cover holding auth state and triggering the interactive sign-in fallback when `authClient`'s silent refresh fails (FR-006a)
-- [ ] T016 [P] [US1] Extend `extension/tests/unit/analysisClient.test.ts` and `extension/tests/unit/chatClient.test.ts` to verify the `Authorization: Bearer <idToken>` header is attached to every request and that `401 unauthenticated`/`403 not-authorized` responses map to the expected sign-in/invitation-only `PanelError` codes
-- [ ] T017 [P] [US1] Unit tests for `allowedUsersStore.ts` (`isAllowed()` email lookup — case/whitespace normalization, present vs. absent row — and `sub` population on an account's first successful sign-in) in `functions/tests/unit/allowedUsersStore.test.ts`
+- [X] T010 [P] [US1] Unit tests for `withAuth` (missing/malformed/expired/invalid-signature token, unverified email, account not in `AllowedUsers` — including a previously-authorized account subsequently removed, FR-006 — and the happy path) in `functions/tests/unit/auth.test.ts`
+- [X] T011 [P] [US1] Integration test: `analyze` and `chat` endpoints reject missing/invalid/unauthorized bearer tokens before any OpenAI call, and accept authorized ones, using recorded JWT fixtures + a stubbed JWKS response and an Azurite-backed `AllowedUsers` table, in `functions/tests/integration/auth.test.ts`
+- [X] T012 [P] [US1] Unit tests for `SignInGate` states (signed-out prompt, invitation-only message, authorized children render) in `extension/tests/unit/SignInGate.test.tsx`
+- [X] T013 [P] [US1] E2E test: unauthenticated user sees the sign-in prompt and cannot reach Summary/Chat; an unauthorized account sees the invitation-only message, in `extension/tests/e2e/signIn.test.ts`
+- [X] T014 [P] [US1] Unit tests for `authClient.ts`: expiry calculation from the decoded ID token, successful silent (`interactive: false`) renewal updating the stored token, and falling back to signaling an interactive sign-in is required when silent renewal fails (FR-006a/SC-008), in `extension/tests/unit/authClient.test.ts`
+- [X] T015 [P] [US1] Extend `extension/tests/unit/background.test.ts` to cover holding auth state and triggering the interactive sign-in fallback when `authClient`'s silent refresh fails (FR-006a)
+- [X] T016 [P] [US1] Extend `extension/tests/unit/analysisClient.test.ts` and `extension/tests/unit/chatClient.test.ts` to verify the `Authorization: Bearer <idToken>` header is attached to every request and that `401 unauthenticated`/`403 not-authorized` responses map to the expected sign-in/invitation-only `PanelError` codes
+- [X] T017 [P] [US1] Unit tests for `allowedUsersStore.ts` (`isAllowed()` email lookup — case/whitespace normalization, present vs. absent row — and `sub` population on an account's first successful sign-in) in `functions/tests/unit/allowedUsersStore.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Wrap `analyzeHandler` with `withAuth` in `functions/src/analyze/index.ts` (depends on T006)
-- [ ] T019 [US1] Wrap `chatHandler` with `withAuth` in `functions/src/chat/index.ts` (depends on T006)
-- [ ] T020 [P] [US1] Attach the `Authorization: Bearer <idToken>` header to requests in `extension/services/analysisClient.ts` (depends on T008)
-- [ ] T021 [P] [US1] Attach the `Authorization: Bearer <idToken>` header to requests in `extension/services/chatClient.ts` (depends on T008)
-- [ ] T022 [US1] Create `extension/components/Auth/SignInGate.tsx` rendering the sign-in prompt, invitation-only message, or authorized children based on `useAuth` state; all interactive elements (sign-in button, sign-out control) MUST carry accessible labels and meet WCAG 2.1 AA color contrast per constitution Principle III (depends on T009)
-- [ ] T023 [US1] Wire `SignInGate` into `extension/entrypoints/sidepanel/App.tsx` to gate the Summary/Chat tabs and add a sign-out control (depends on T022)
-- [ ] T024 [US1] Update `extension/entrypoints/background.ts` to hold auth state and silently refresh the ID token before expiry, falling back to an interactive sign-in prompt on failure (depends on T008)
-- [ ] T025 [US1] Map the new `unauthenticated`/`not-authorized` error codes to the sign-in/invitation-only UI states in `extension/services/analysisClient.ts` and `extension/services/chatClient.ts` error handling (depends on T020, T021)
+- [X] T018 [US1] Wrap `analyzeHandler` with `withAuth` in `functions/src/analyze/index.ts` (depends on T006)
+- [X] T019 [US1] Wrap `chatHandler` with `withAuth` in `functions/src/chat/index.ts` (depends on T006)
+- [X] T020 [P] [US1] Attach the `Authorization: Bearer <idToken>` header to requests in `extension/services/analysisClient.ts` (depends on T008)
+- [X] T021 [P] [US1] Attach the `Authorization: Bearer <idToken>` header to requests in `extension/services/chatClient.ts` (depends on T008)
+- [X] T022 [US1] Create `extension/components/Auth/SignInGate.tsx` rendering the sign-in prompt, invitation-only message, or authorized children based on `useAuth` state; all interactive elements (sign-in button, sign-out control) MUST carry accessible labels and meet WCAG 2.1 AA color contrast per constitution Principle III (depends on T009)
+- [X] T023 [US1] Wire `SignInGate` into `extension/entrypoints/sidepanel/App.tsx` to gate the Summary/Chat tabs and add a sign-out control (depends on T022)
+- [X] T024 [US1] Update `extension/entrypoints/background.ts` to hold auth state and silently refresh the ID token before expiry, falling back to an interactive sign-in prompt on failure (depends on T008)
+- [X] T025 [US1] Map the new `unauthenticated`/`not-authorized` error codes to the sign-in/invitation-only UI states in `extension/services/analysisClient.ts` and `extension/services/chatClient.ts` error handling (depends on T020, T021)
 
 **Checkpoint**: User Story 1 is fully functional and independently testable.
 
@@ -94,20 +94,20 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Unit tests for `savedVideosStore` create/update — including that appending new chat messages to an already-saved video persists them (FR-015) — chat-history chunking (data-model.md §5), and the 200-per-account cap check — create rejected at 200 existing rows, update never rejected (FR-019) — in `functions/tests/unit/savedVideosStore.test.ts`
-- [ ] T027 [P] [US2] Unit tests for the save-or-update (`PUT`) and get-one (`GET /{videoId}`) handlers, including a `409 saved-video-limit-reached` response when a create would exceed the cap, in `functions/tests/unit/savedVideos.handler.test.ts`
-- [ ] T028 [P] [US2] Integration test: save-or-update then get-one round trip against Azurite, a cap-boundary case (200 existing rows → 201st create rejected, existing-row update still succeeds), and a cross-account isolation case (two different `sub` values each saving the same `videoId` never see or affect each other's row, FR-010), in `functions/tests/integration/savedVideos.test.ts`
-- [ ] T029 [P] [US2] Unit tests for `savedVideosClient.ts` save/get functions, including mapping the `saved-video-limit-reached` error, in `extension/tests/unit/savedVideosClient.test.ts`
-- [ ] T030 [P] [US2] Unit tests for `SaveButton` (idle, saving, saved, error, and limit-reached states), including confirming no save request is ever issued merely from viewing a video — only from the explicit save action (SC-006) — in `extension/tests/unit/SaveButton.test.tsx`
+- [X] T026 [P] [US2] Unit tests for `savedVideosStore` create/update — including that appending new chat messages to an already-saved video persists them (FR-015) — chat-history chunking (data-model.md §5), and the 200-per-account cap check — create rejected at 200 existing rows, update never rejected (FR-019) — in `functions/tests/unit/savedVideosStore.test.ts`
+- [X] T027 [P] [US2] Unit tests for the save-or-update (`PUT`) and get-one (`GET /{videoId}`) handlers, including a `409 saved-video-limit-reached` response when a create would exceed the cap, in `functions/tests/unit/savedVideos.handler.test.ts`
+- [X] T028 [P] [US2] Integration test: save-or-update then get-one round trip against Azurite, a cap-boundary case (200 existing rows → 201st create rejected, existing-row update still succeeds), and a cross-account isolation case (two different `sub` values each saving the same `videoId` never see or affect each other's row, FR-010), in `functions/tests/integration/savedVideos.test.ts`
+- [X] T029 [P] [US2] Unit tests for `savedVideosClient.ts` save/get functions, including mapping the `saved-video-limit-reached` error, in `extension/tests/unit/savedVideosClient.test.ts`
+- [X] T030 [P] [US2] Unit tests for `SaveButton` (idle, saving, saved, error, and limit-reached states), including confirming no save request is ever issued merely from viewing a video — only from the explicit save action (SC-006) — in `extension/tests/unit/SaveButton.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Add `SavedVideo` request/response types, type guards, and the `not-found`/`saved-video-limit-reached` `FunctionError` codes in `functions/src/models/index.ts` (depends on T004)
-- [ ] T032 [US2] Implement create/update/get-one in `functions/src/services/savedVideosStore.ts` per data-model.md, including chat-history chunking, the 200-per-account cap check (`RowKey`-only partition count, create-only, FR-019), and always scoping every read/write to the caller's `sub` (FR-010) (depends on T031)
-- [ ] T033 [US2] Register `PUT /api/saved-videos/{videoId}` and `GET /api/saved-videos/{videoId}`, each wrapped in `withAuth`, returning `409 saved-video-limit-reached` when the store rejects a capped create, in `functions/src/auth/index.ts` (depends on T032, T006)
-- [ ] T034 [P] [US2] Add a `SavedVideoDetail` type to `extension/types/index.ts` (mirroring contracts/saved-videos-api.md's get-one response shape) and implement `saveVideo()` and `getSavedVideo()` in `extension/services/savedVideosClient.ts`, mapping `409 saved-video-limit-reached` to a distinct error the UI can special-case (depends on T033, T008)
-- [ ] T035 [US2] Implement `extension/components/Saved/SaveButton.tsx` with a saved-state indicator and non-blocking failure messaging, including a specific "remove a saved video first" message for the limit-reached case; the button and its states MUST carry accessible labels/announcements per constitution Principle III (depends on T034)
-- [ ] T036 [US2] Wire `SaveButton` into the Summary and Chat views (`extension/components/KnowledgePanel/KnowledgePanel.tsx`, `extension/components/Chat/ChatPanel.tsx`) (depends on T035)
+- [X] T031 [P] [US2] Add `SavedVideo` request/response types, type guards, and the `not-found`/`saved-video-limit-reached` `FunctionError` codes in `functions/src/models/index.ts` (depends on T004)
+- [X] T032 [US2] Implement create/update/get-one in `functions/src/services/savedVideosStore.ts` per data-model.md, including chat-history chunking, the 200-per-account cap check (`RowKey`-only partition count, create-only, FR-019), and always scoping every read/write to the caller's `sub` (FR-010) (depends on T031)
+- [X] T033 [US2] Register `PUT /api/saved-videos/{videoId}` and `GET /api/saved-videos/{videoId}`, each wrapped in `withAuth`, returning `409 saved-video-limit-reached` when the store rejects a capped create, in `functions/src/auth/index.ts` (depends on T032, T006)
+- [X] T034 [P] [US2] Add a `SavedVideoDetail` type to `extension/types/index.ts` (mirroring contracts/saved-videos-api.md's get-one response shape) and implement `saveVideo()` and `getSavedVideo()` in `extension/services/savedVideosClient.ts`, mapping `409 saved-video-limit-reached` to a distinct error the UI can special-case (depends on T033, T008)
+- [X] T035 [US2] Implement `extension/components/Saved/SaveButton.tsx` with a saved-state indicator and non-blocking failure messaging, including a specific "remove a saved video first" message for the limit-reached case; the button and its states MUST carry accessible labels/announcements per constitution Principle III (depends on T034)
+- [X] T036 [US2] Wire `SaveButton` into the Summary and Chat views (`extension/components/KnowledgePanel/KnowledgePanel.tsx`, `extension/components/Chat/ChatPanel.tsx`) (depends on T035)
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -121,20 +121,20 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ### Tests for User Story 3
 
-- [ ] T037 [P] [US3] Unit tests for the list (`GET`) and delete (`DELETE`) handlers, extending `functions/tests/unit/savedVideos.handler.test.ts`
-- [ ] T038 [P] [US3] Integration test: list + delete round trip against Azurite, extending `functions/tests/integration/savedVideos.test.ts`
-- [ ] T039 [P] [US3] Unit tests for `savedVideosClient.ts` list/delete functions, extending `extension/tests/unit/savedVideosClient.test.ts`
-- [ ] T040 [P] [US3] Unit tests for `SavedList` (empty state, populated list) and `SavedVideoDetail` (restore) in `extension/tests/unit/SavedList.test.tsx` and `extension/tests/unit/SavedVideoDetail.test.tsx`
-- [ ] T041 [P] [US3] E2E test: save a video, browse the Saved view, restore it, unsave it, in `extension/tests/e2e/savedHistory.test.ts`
+- [X] T037 [P] [US3] Unit tests for the list (`GET`) and delete (`DELETE`) handlers, extending `functions/tests/unit/savedVideos.handler.test.ts`
+- [X] T038 [P] [US3] Integration test: list + delete round trip against Azurite, extending `functions/tests/integration/savedVideos.test.ts`
+- [X] T039 [P] [US3] Unit tests for `savedVideosClient.ts` list/delete functions, extending `extension/tests/unit/savedVideosClient.test.ts`
+- [X] T040 [P] [US3] Unit tests for `SavedList` (empty state, populated list) and `SavedVideoDetail` (restore) in `extension/tests/unit/SavedList.test.tsx` and `extension/tests/unit/SavedVideoDetail.test.tsx`
+- [X] T041 [P] [US3] E2E test: save a video, browse the Saved view, restore it, unsave it, in `extension/tests/e2e/savedHistory.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T042 [US3] Add `list()` and `delete()` to `functions/src/services/savedVideosStore.ts` (depends on T032)
-- [ ] T043 [US3] Register `GET /api/saved-videos` and `DELETE /api/saved-videos/{videoId}`, each wrapped in `withAuth`, in `functions/src/auth/index.ts` (depends on T042, T033)
-- [ ] T044 [P] [US3] Add a `SavedVideoSummary` type to `extension/types/index.ts` (mirroring contracts/saved-videos-api.md's list response shape) and implement `listSavedVideos()` and `deleteSavedVideo()` in `extension/services/savedVideosClient.ts` (depends on T043)
-- [ ] T045 [US3] Implement `extension/components/Saved/SavedList.tsx` with populated-list and empty states (FR-012/FR-017); list items and the empty-state call-to-action MUST carry accessible labels per constitution Principle III (depends on T044)
-- [ ] T046 [US3] Implement `extension/components/Saved/SavedVideoDetail.tsx` restoring summary + chat and allowing continued chatting on the restored, saved video (FR-013/FR-015); restore/unsave controls MUST carry accessible labels per constitution Principle III (depends on T044)
-- [ ] T047 [US3] Add a "Saved" tab to the `TABS` array and render `SavedList`/`SavedVideoDetail` in `extension/entrypoints/sidepanel/App.tsx` (depends on T045, T046)
+- [X] T042 [US3] Add `list()` and `delete()` to `functions/src/services/savedVideosStore.ts` (depends on T032)
+- [X] T043 [US3] Register `GET /api/saved-videos` and `DELETE /api/saved-videos/{videoId}`, each wrapped in `withAuth`, in `functions/src/auth/index.ts` (depends on T042, T033)
+- [X] T044 [P] [US3] Add a `SavedVideoSummary` type to `extension/types/index.ts` (mirroring contracts/saved-videos-api.md's list response shape) and implement `listSavedVideos()` and `deleteSavedVideo()` in `extension/services/savedVideosClient.ts` (depends on T043)
+- [X] T045 [US3] Implement `extension/components/Saved/SavedList.tsx` with populated-list and empty states (FR-012/FR-017); list items and the empty-state call-to-action MUST carry accessible labels per constitution Principle III (depends on T044)
+- [X] T046 [US3] Implement `extension/components/Saved/SavedVideoDetail.tsx` restoring summary + chat and allowing continued chatting on the restored, saved video (FR-013/FR-015); restore/unsave controls MUST carry accessible labels per constitution Principle III (depends on T044)
+- [X] T047 [US3] Add a "Saved" tab to the `TABS` array and render `SavedList`/`SavedVideoDetail` in `extension/entrypoints/sidepanel/App.tsx` (depends on T045, T046)
 
 **Checkpoint**: User Stories 1, 2, and 3 all work independently — the core save/restore experience is complete.
 
@@ -148,11 +148,11 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ### Tests for User Story 4
 
-- [ ] T048 [P] [US4] Integration test: two independent authenticated requests sharing the same `sub` (simulating two devices) see identical, up-to-date data after either "device" updates it, in `functions/tests/integration/savedVideos.crossDevice.test.ts`
+- [X] T048 [P] [US4] Integration test: two independent authenticated requests sharing the same `sub` (simulating two devices) see identical, up-to-date data after either "device" updates it, in `functions/tests/integration/savedVideos.crossDevice.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T049 [US4] Ensure `extension/components/Saved/SavedVideoDetail.tsx` always fetches current state from the backend on open rather than relying on any locally cached copy (depends on T046)
+- [X] T049 [US4] Ensure `extension/components/Saved/SavedVideoDetail.tsx` always fetches current state from the backend on open rather than relying on any locally cached copy (depends on T046)
 
 **Checkpoint**: Cross-device behavior is verified by an automated integration test; two-profile manual validation per quickstart.md US4 section is the remaining human check (not automatable without two real signed-in Chrome profiles).
 
@@ -166,12 +166,12 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ### Tests for User Story 5
 
-- [ ] T050 [P] [US5] Unit tests for the `AllowedUsers` management CLI (`add`/`remove`/`list`) against Azurite in `functions/tests/unit/manageAllowedUsers.test.ts`
+- [X] T050 [P] [US5] Unit tests for the `AllowedUsers` management CLI (`add`/`remove`/`list`) against Azurite in `functions/tests/unit/manageAllowedUsers.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T051 [US5] Implement `functions/scripts/manage-allowed-users.ts` (`add <email>` / `remove <email>` / `list`) using `@azure/data-tables` directly against the configured storage connection string (depends on T005)
-- [ ] T052 [US5] Add an `allowed-users` npm script entry invoking the CLI in `functions/package.json` (depends on T051)
+- [X] T051 [US5] Implement `functions/scripts/manage-allowed-users.ts` (`add <email>` / `remove <email>` / `list`) using `@azure/data-tables` directly against the configured storage connection string (depends on T005)
+- [X] T052 [US5] Add an `allowed-users` npm script entry invoking the CLI in `functions/package.json` (depends on T051)
 
 **Checkpoint**: All five user stories are independently functional.
 
@@ -179,10 +179,10 @@ Two projects, per plan.md: `extension/` (Chrome extension, React) and `functions
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T053 [P] Audit `functions/src/services/auth.ts` and `functions/src/auth/index.ts` to ensure ID tokens and email addresses are never written to `context.log`/console output
-- [ ] T054 [P] Document the new required environment variables (`GOOGLE_OAUTH_CLIENT_ID` for the backend audience check; confirm table names) in `functions/local.settings.json`'s tracked example/README and `extension/.env.local` example
-- [ ] T055 Run full lint, typecheck, and the complete existing test suites across both projects (`npm run lint`, `npm run compile`, `npm test` in `extension/`; `npm run lint`, `npm run build`, `npm test` in `functions/`), confirming `sessionCache.test.ts`/`chatCache.test.ts` still pass unmodified — unsaved-video session behavior remains bit-for-bit unchanged (FR-009)
-- [ ] T056 Execute the full `quickstart.md` validation walkthrough end-to-end
+- [X] T053 [P] Audit `functions/src/services/auth.ts` and `functions/src/auth/index.ts` to ensure ID tokens and email addresses are never written to `context.log`/console output
+- [X] T054 [P] Document the new required environment variables (`GOOGLE_OAUTH_CLIENT_ID` for the backend audience check; confirm table names) in `functions/local.settings.json`'s tracked example/README and `extension/.env.local` example
+- [X] T055 Run full lint, typecheck, and the complete existing test suites across both projects (`npm run lint`, `npm run compile`, `npm test` in `extension/`; `npm run lint`, `npm run build`, `npm test` in `functions/`), confirming `sessionCache.test.ts`/`chatCache.test.ts` still pass unmodified — unsaved-video session behavior remains bit-for-bit unchanged (FR-009)
+- [X] T056 Execute the full `quickstart.md` validation walkthrough end-to-end
 
 ---
 
