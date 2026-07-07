@@ -1,5 +1,6 @@
 import type { AnalysisResult, PanelError, ErrorCode } from "../types/index";
 import type { Video } from "../types/index";
+import { getIdToken } from "./authClient";
 
 declare const WXT_AZURE_FUNCTION_URL: string;
 declare const WXT_AZURE_FUNCTION_KEY: string;
@@ -31,6 +32,12 @@ export async function postAnalysis(video: Video): Promise<AnalysisResult> {
     endpoint.searchParams.set("code", WXT_AZURE_FUNCTION_KEY);
   }
 
+  const idToken = await getIdToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (idToken) {
+    headers["Authorization"] = `Bearer ${idToken}`;
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -38,7 +45,7 @@ export async function postAnalysis(video: Video): Promise<AnalysisResult> {
   try {
     response = await fetch(endpoint.toString(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -57,6 +64,12 @@ export async function postAnalysis(video: Video): Promise<AnalysisResult> {
 }
 
 function mapHttpError(status: number): PanelError {
+  if (status === 401) {
+    return makePanelError("unauthenticated", "Sign in with Google to continue.", "Sign in and try again.", false);
+  }
+  if (status === 403) {
+    return makePanelError("not-authorized", "Access to this extension is invitation-only.", "Contact the developer for access.", false);
+  }
   if (status === 400 || status === 422) {
     const code: ErrorCode = status === 422 ? "transcript-too-long" : "unknown";
     return makePanelError(code, "The video could not be analyzed.", "Try a shorter video or check captions are available.", false);

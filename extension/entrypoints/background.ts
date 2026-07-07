@@ -1,5 +1,6 @@
 import { postAnalysis } from "../services/analysisClient";
 import { getResult, hasResult, setResult, setLastVideo, getLastVideo, storeVideo } from "../services/sessionCache";
+import { getStoredAuth, signInSilently, signOut as authSignOut } from "../services/authClient";
 import { MessageType } from "../types/messages";
 import type {
   ExtensionMessage,
@@ -10,10 +11,13 @@ import type { PanelError, Video } from "../types/index";
 
 declare const WXT_AZURE_FUNCTION_URL: string;
 
+const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;
+
 export default defineBackground({
   main() {
     console.log("[background] service URL configured:", !!WXT_AZURE_FUNCTION_URL);
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    void ensureFreshAuth();
 
     chrome.runtime.onMessage.addListener(
       (message: ExtensionMessage, _sender, sendResponse) => {
@@ -30,6 +34,23 @@ export default defineBackground({
     );
   },
 });
+
+/**
+ * Attempts silent token renewal on every extension/background start (research.md §1) —
+ * not a hand-built timer. Only acts on an existing session (a user who never signed in
+ * has nothing to refresh); if silent renewal fails, clears the stored session so the
+ * side panel falls back to prompting an interactive sign-in (FR-006a).
+ */
+export async function ensureFreshAuth(): Promise<void> {
+  const stored = await getStoredAuth();
+  if (!stored) return;
+  if (stored.expiresAt - Date.now() > REFRESH_BEFORE_EXPIRY_MS) return;
+
+  const user = await signInSilently();
+  if (!user) {
+    await authSignOut();
+  }
+}
 
 async function handleTranscriptReady(video: Video): Promise<void> {
   await setLastVideo({ videoId: video.videoId, title: video.title, channelName: video.channelName });

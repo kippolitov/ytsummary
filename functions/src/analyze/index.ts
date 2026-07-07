@@ -1,11 +1,13 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { isAnalyzeRequest } from "../models/index";
+import { isAnalyzeRequest, AuthenticatedUser } from "../models/index";
 import { orchestrateAnalysis } from "../services/openaiOrchestrator";
 import { fetchTranscript } from "../services/transcriptFetcher";
+import { withAuth } from "../services/auth";
 
 export async function analyzeHandler(
   request: HttpRequest,
-  context: InvocationContext
+  context: InvocationContext,
+  _user?: AuthenticatedUser
 ): Promise<HttpResponseInit> {
   if (request.method === "OPTIONS") {
     return { status: 204, headers: corsHeaders() };
@@ -72,7 +74,7 @@ app.http("analyze", {
   methods: ["POST"],
   authLevel: "function",
   route: "analyze",
-  handler: analyzeHandler,
+  handler: withAuth(analyzeHandler),
 });
 
 app.http("analyze-preflight", {

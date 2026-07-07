@@ -17,6 +17,13 @@ vi.mock("../../services/chatClient", () => ({
 vi.mock("../../services/followUpClient", () => ({
   fetchFollowUpPrompts: vi.fn(),
 }));
+vi.mock("../../components/Saved/SaveButton", () => ({
+  SaveButton: ({ videoId }: { videoId: string }) => (
+    <button aria-label="Save video" data-testid={`save-${videoId}`}>
+      Save
+    </button>
+  ),
+}));
 
 import { ChatPanel } from "../../components/Chat/ChatPanel";
 import { getChatSession, saveChatSession } from "../../services/chatCache";
