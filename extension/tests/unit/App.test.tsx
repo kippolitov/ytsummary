@@ -264,6 +264,17 @@ describe("App", () => {
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
+  it("connects a sidepanel port on mount and disconnects it on unmount", async () => {
+    const { unmount } = render(<App />);
+    await screen.findByText("Open a YouTube video");
+
+    expect(chrome.runtime.connect).toHaveBeenCalledWith({ name: "sidepanel" });
+    const port = (chrome.runtime.connect as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
+
+    unmount();
+    expect(port.disconnect).toHaveBeenCalled();
+  });
+
   it("switches to the Saved tab and shows the saved list", async () => {
     render(<App />);
     await screen.findByText("Open a YouTube video");

@@ -24,6 +24,28 @@ const chromeMock = {
       addListener: vi.fn(),
       removeListener: vi.fn(),
     },
+    connect: vi.fn(() => ({
+      disconnect: vi.fn(),
+      postMessage: vi.fn(),
+      onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+      onDisconnect: { addListener: vi.fn(), removeListener: vi.fn() },
+    })),
+    onConnect: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
+  },
+  tabs: {
+    query: vi.fn().mockResolvedValue([]),
+    sendMessage: vi.fn().mockResolvedValue(undefined),
+    onActivated: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
+    onUpdated: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
   },
   sidePanel: {
     setPanelBehavior: vi.fn().mockResolvedValue(undefined),

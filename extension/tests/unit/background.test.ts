@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { MessageType } from "../../types/messages";
 import type { ExtensionMessage } from "../../types/messages";
 import type { AnalysisResult, PanelError, Video } from "../../types/index";
@@ -55,8 +55,19 @@ const result: AnalysisResult = {
   analyzedAt: "2026-06-10T10:00:00Z",
 };
 
+type PortListener = (port: { name: string; onDisconnect: { addListener: (cb: () => void) => void } }) => void;
+type TabActivatedListener = (info: { tabId: number }) => void;
+type TabUpdatedListener = (
+  tabId: number,
+  changeInfo: { status?: string },
+  tab: { active: boolean }
+) => void;
+
 let listener: MessageListener;
 let ensureFreshAuth: () => Promise<void>;
+let connectListener: PortListener;
+let activatedListener: TabActivatedListener;
+let updatedListener: TabUpdatedListener;
 
 function sentMessages(): ExtensionMessage[] {
   return (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.map(
@@ -88,6 +99,15 @@ beforeAll(async () => {
 
   const addListener = chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>;
   listener = addListener.mock.calls.at(-1)![0] as MessageListener;
+
+  const addConnectListener = chrome.runtime.onConnect.addListener as ReturnType<typeof vi.fn>;
+  connectListener = addConnectListener.mock.calls.at(-1)![0] as PortListener;
+
+  const addActivatedListener = chrome.tabs.onActivated.addListener as ReturnType<typeof vi.fn>;
+  activatedListener = addActivatedListener.mock.calls.at(-1)![0] as TabActivatedListener;
+
+  const addUpdatedListener = chrome.tabs.onUpdated.addListener as ReturnType<typeof vi.fn>;
+  updatedListener = addUpdatedListener.mock.calls.at(-1)![0] as TabUpdatedListener;
 });
 
 describe("background entrypoint", () => {
@@ -315,6 +335,111 @@ describe("background entrypoint", () => {
       await ensureFreshAuth();
 
       expect(authSignOut).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("side panel gated transcript requests", () => {
+    let disconnect: () => void;
+
+    function connectPanel(): void {
+      let onDisconnect: () => void = () => {};
+      connectListener({
+        name: "sidepanel",
+        onDisconnect: { addListener: (cb) => { onDisconnect = cb; } },
+      });
+      disconnect = () => onDisconnect();
+    }
+
+    beforeEach(() => {
+      vi.mocked(chrome.tabs.query).mockReset().mockResolvedValue([{ id: 42 }] as never);
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockReset().mockResolvedValue(undefined);
+      disconnect = () => {};
+    });
+
+    afterEach(() => {
+      disconnect();
+    });
+
+    it("requests the active tab's transcript when the side panel connects", async () => {
+      connectPanel();
+
+      await vi.waitFor(() =>
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(42, {
+          type: MessageType.REQUEST_TRANSCRIPT,
+        })
+      );
+    });
+
+    it("ignores connections that aren't the side panel port", () => {
+      connectListener({ name: "something-else", onDisconnect: { addListener: vi.fn() } });
+      expect(chrome.tabs.query).not.toHaveBeenCalled();
+    });
+
+    it("requests the newly active tab's transcript when switching tabs while the panel is open", async () => {
+      connectPanel();
+      await vi.waitFor(() => expect(chrome.tabs.sendMessage).toHaveBeenCalled());
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+
+      activatedListener({ tabId: 99 });
+
+      await vi.waitFor(() =>
+        expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(99, {
+          type: MessageType.REQUEST_TRANSCRIPT,
+        })
+      );
+    });
+
+    it("stops requesting on tab activation once the panel disconnects", async () => {
+      connectPanel();
+      await vi.waitFor(() => expect(chrome.tabs.sendMessage).toHaveBeenCalled());
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+
+      disconnect();
+      activatedListener({ tabId: 7 });
+
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("does not request tabs on activation before the panel ever connects", () => {
+      activatedListener({ tabId: 5 });
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("re-requests the transcript when the active tab finishes a hard navigation", async () => {
+      connectPanel();
+      await vi.waitFor(() => expect(chrome.tabs.sendMessage).toHaveBeenCalled());
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+
+      updatedListener(42, { status: "complete" }, { active: true });
+
+      expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(42, {
+        type: MessageType.REQUEST_TRANSCRIPT,
+      });
+    });
+
+    it("ignores navigation updates on inactive tabs", async () => {
+      connectPanel();
+      await vi.waitFor(() => expect(chrome.tabs.sendMessage).toHaveBeenCalled());
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+
+      updatedListener(99, { status: "complete" }, { active: false });
+
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("ignores in-progress navigation updates", async () => {
+      connectPanel();
+      await vi.waitFor(() => expect(chrome.tabs.sendMessage).toHaveBeenCalled());
+      (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+
+      updatedListener(42, { status: "loading" }, { active: true });
+
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("ignores navigation updates while the panel is closed", () => {
+      updatedListener(42, { status: "complete" }, { active: true });
+      expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
     });
   });
 });
