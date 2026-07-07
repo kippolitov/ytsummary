@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("../../services/authClient", () => ({
+  getIdToken: vi.fn(),
+}));
+
 import { sendChatMessage } from "../../services/chatClient";
+import { getIdToken } from "../../services/authClient";
 import type { ChatRequest } from "../../types/chat";
 
 const BASE_REQUEST: ChatRequest = {
@@ -28,6 +34,7 @@ describe("chatClient — sendChatMessage", () => {
     // Stub WXT env vars
     vi.stubGlobal("WXT_AZURE_FUNCTION_URL", "http://localhost:7071/api/chat");
     vi.stubGlobal("WXT_AZURE_FUNCTION_KEY", "test-key");
+    vi.mocked(getIdToken).mockReset().mockResolvedValue("test-id-token");
   });
 
   afterEach(() => {
@@ -136,10 +143,37 @@ describe("chatClient — sendChatMessage", () => {
     [400, "unknown", false],
     [422, "transcript-too-long", false],
     [500, "service-error", true],
+    [401, "unauthenticated", false],
+    [403, "not-authorized", false],
   ])("maps HTTP %i to PanelError code %s", async (status, code, retryable) => {
     vi.mocked(fetch).mockResolvedValue(new Response("{}", { status }));
     const gen = sendChatMessage(BASE_REQUEST);
     await expect(gen.next()).rejects.toMatchObject({ code, retryable });
+  });
+
+  it("attaches the Authorization bearer header when a token is available", async () => {
+    const body = sseBody(["data: [DONE]\n\n"]);
+    vi.mocked(fetch).mockResolvedValue(new Response(body, { status: 200 }));
+
+    const gen = sendChatMessage(BASE_REQUEST);
+    for await (const _ of gen) { /* drain */ }
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    const headers = new Headers((init as RequestInit).headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-id-token");
+  });
+
+  it("omits the Authorization header when no token is stored", async () => {
+    vi.mocked(getIdToken).mockResolvedValue(null);
+    const body = sseBody(["data: [DONE]\n\n"]);
+    vi.mocked(fetch).mockResolvedValue(new Response(body, { status: 200 }));
+
+    const gen = sendChatMessage(BASE_REQUEST);
+    for await (const _ of gen) { /* drain */ }
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    const headers = new Headers((init as RequestInit).headers);
+    expect(headers.has("Authorization")).toBe(false);
   });
 
   it("upgrades the error code when the body reports rate-limited", async () => {

@@ -1,5 +1,6 @@
 import type { ChatRequest, ChatStreamChunk } from "../types/chat";
 import type { PanelError, ErrorCode } from "../types/index";
+import { getIdToken } from "./authClient";
 
 declare const WXT_AZURE_FUNCTION_URL: string;
 declare const WXT_AZURE_FUNCTION_KEY: string;
@@ -14,6 +15,12 @@ export async function* sendChatMessage(req: ChatRequest): AsyncGenerator<string>
       : req;
 
   const chatUrl = buildChatUrl();
+  const idToken = await getIdToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (idToken) {
+    headers["Authorization"] = `Bearer ${idToken}`;
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -21,7 +28,7 @@ export async function* sendChatMessage(req: ChatRequest): AsyncGenerator<string>
   try {
     response = await fetch(chatUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(truncatedReq),
       signal: controller.signal,
     });
@@ -92,7 +99,17 @@ async function mapHttpError(response: Response): Promise<PanelError> {
   let action = "Try again.";
   let retryable = true;
 
-  if (response.status === 400 || response.status === 422) {
+  if (response.status === 401) {
+    code = "unauthenticated";
+    message = "Sign in with Google to continue.";
+    action = "Sign in and try again.";
+    retryable = false;
+  } else if (response.status === 403) {
+    code = "not-authorized";
+    message = "Access to this extension is invitation-only.";
+    action = "Contact the developer for access.";
+    retryable = false;
+  } else if (response.status === 400 || response.status === 422) {
     code = response.status === 422 ? "transcript-too-long" : "unknown";
     message = "The chat request was invalid.";
     action = "Try again with a shorter message or different video.";

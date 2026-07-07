@@ -4,7 +4,11 @@ import { LoadingIndicator } from "../../components/shared/LoadingIndicator";
 import { ErrorMessage } from "../../components/shared/ErrorMessage";
 import { TabBar } from "../../components/shared/TabBar";
 import { ChatPanel } from "../../components/Chat/ChatPanel";
+import { SignInGate } from "../../components/Auth/SignInGate";
+import { SavedList } from "../../components/Saved/SavedList";
+import { SavedVideoDetail } from "../../components/Saved/SavedVideoDetail";
 import { useTheme } from "../../hooks/useTheme";
+import { useAuth } from "../../hooks/useAuth";
 import { getLastVideo, getResult } from "../../services/sessionCache";
 import { MessageType } from "../../types/messages";
 import type { ExtensionMessage } from "../../types/messages";
@@ -13,6 +17,7 @@ import type { KnowledgePanelState } from "../../types/index";
 const TABS = [
   { id: "summary", label: "Summary" },
   { id: "chat", label: "Chat" },
+  { id: "saved", label: "Saved" },
 ];
 
 const INITIAL_STATE: KnowledgePanelState = {
@@ -25,10 +30,12 @@ const INITIAL_STATE: KnowledgePanelState = {
 
 export function App() {
   const { preference, cycleTheme } = useTheme();
+  const auth = useAuth();
   const [state, setState] = useState<KnowledgePanelState>(INITIAL_STATE);
   const [videoTitle, setVideoTitle] = useState<string>("");
   const [channelName, setChannelName] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("summary");
+  const [selectedSavedVideoId, setSelectedSavedVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     async function hydrate() {
@@ -180,62 +187,99 @@ export function App() {
             <path d="M8 16H3v5" />
           </svg>
         </button>
+        {auth.status === "signed-in" && (
+          <button
+            onClick={() => void auth.signOut()}
+            title="Sign out"
+            aria-label="Sign out"
+            className="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        )}
       </header>
 
-      <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+      <SignInGate auth={auth} onSignIn={() => void auth.signIn()} onSignOut={() => void auth.signOut()}>
+        <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {activeTab === "summary" && (
-          <div
-            id="panel-summary"
-            role="tabpanel"
-            aria-labelledby="tab-summary"
-            className="h-full overflow-y-auto"
-          >
-            {state.status === "idle" && (
-              <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500" aria-hidden="true">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {activeTab === "summary" && (
+            <div
+              id="panel-summary"
+              role="tabpanel"
+              aria-labelledby="tab-summary"
+              className="h-full overflow-y-auto"
+            >
+              {state.status === "idle" && (
+                <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 dark:text-gray-500" aria-hidden="true">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Open a YouTube video</p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-600">The summary will appear here automatically.</p>
                 </div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Open a YouTube video</p>
-                <p className="mt-1 text-xs text-gray-400 dark:text-gray-600">The summary will appear here automatically.</p>
-              </div>
-            )}
-            {state.status === "loading" && <LoadingIndicator />}
-            {state.status === "ready" && state.result && (
-              <KnowledgePanel result={state.result} videoTitle={videoTitle} channelName={channelName} />
-            )}
-            {state.status === "error" && state.error && (
-              <div className="p-4">
-                <ErrorMessage error={state.error} onRetry={handleRetry} />
-              </div>
-            )}
-            {state.status === "no-transcript" && (
-              <div className="p-4">
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">No captions available</p>
-                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-500">
-                    This video doesn&apos;t have captions. Try a video with captions enabled.
-                  </p>
+              )}
+              {state.status === "loading" && <LoadingIndicator />}
+              {state.status === "ready" && state.result && (
+                <KnowledgePanel result={state.result} videoTitle={videoTitle} channelName={channelName} />
+              )}
+              {state.status === "error" && state.error && (
+                <div className="p-4">
+                  <ErrorMessage error={state.error} onRetry={handleRetry} />
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+              {state.status === "no-transcript" && (
+                <div className="p-4">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">No captions available</p>
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-500">
+                      This video doesn&apos;t have captions. Try a video with captions enabled.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-        {activeTab === "chat" && (
-          <div
-            id="panel-chat"
-            role="tabpanel"
-            aria-labelledby="tab-chat"
-            className="h-full"
-          >
-            <ChatPanel videoId={state.videoId} />
-          </div>
-        )}
-      </div>
+          {activeTab === "chat" && (
+            <div
+              id="panel-chat"
+              role="tabpanel"
+              aria-labelledby="tab-chat"
+              className="h-full"
+            >
+              <ChatPanel videoId={state.videoId} />
+            </div>
+          )}
+
+          {activeTab === "saved" && (
+            <div
+              id="panel-saved"
+              role="tabpanel"
+              aria-labelledby="tab-saved"
+              className="h-full overflow-hidden"
+            >
+              {selectedSavedVideoId ? (
+                <SavedVideoDetail
+                  videoId={selectedSavedVideoId}
+                  onBack={() => setSelectedSavedVideoId(null)}
+                  onUnsaved={() => setSelectedSavedVideoId(null)}
+                />
+              ) : (
+                <div className="h-full overflow-y-auto">
+                  <SavedList onSelect={setSelectedSavedVideoId} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SignInGate>
     </main>
   );
 }

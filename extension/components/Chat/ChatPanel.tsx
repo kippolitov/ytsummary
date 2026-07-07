@@ -9,16 +9,20 @@ import { ChatInput } from "./ChatInput";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { BlogPostButton } from "./BlogPostButton";
 import { FollowUpPromptChips } from "./FollowUpPromptChips";
+import { SaveButton } from "../Saved/SaveButton";
 
 interface ChatPanelProps {
   videoId: string;
+  /** Called with the full message list after a new exchange is persisted locally — lets a
+   *  saved-video view (SavedVideoDetail) re-PUT the saved copy so new messages persist (FR-015). */
+  onMessagesUpdated?: (messages: ChatMessage[]) => void;
 }
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 11);
 }
 
-export function ChatPanel({ videoId }: ChatPanelProps) {
+export function ChatPanel({ videoId, onMessagesUpdated }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -125,6 +129,7 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
 
     if (accumulated) {
       await persistSession(updatedAll);
+      onMessagesUpdated?.(updatedAll);
       if (mode === "chat") {
         setIsLoadingFollowUp(true);
         const historyWithReply: ChatHistoryItem[] = updatedAll.map((m) => ({
@@ -164,6 +169,9 @@ export function ChatPanel({ videoId }: ChatPanelProps) {
 
   return (
     <div className="flex h-full flex-col bg-gray-50 dark:bg-gray-950">
+      <div className="flex shrink-0 items-center justify-end border-b border-gray-200/70 bg-white px-3 py-1.5 dark:border-gray-800 dark:bg-gray-900">
+        <SaveButton videoId={videoId} />
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-2">
         {messages.length === 0 && !streamingMessage && (
           <div className="flex flex-col items-center justify-center px-6 py-12 text-center">

@@ -1,13 +1,15 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { isChatRequest, isFollowUpPromptsRequest } from "../models/index";
+import { isChatRequest, isFollowUpPromptsRequest, AuthenticatedUser } from "../models/index";
 import { streamChatResponse, generateFollowUpPrompts } from "../services/chatOrchestrator";
+import { withAuth } from "../services/auth";
 
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MAX_MESSAGES = 50;
 
 export async function chatHandler(
   request: HttpRequest,
-  context: InvocationContext
+  context: InvocationContext,
+  _user?: AuthenticatedUser
 ): Promise<HttpResponseInit> {
   if (request.method === "OPTIONS") {
     return { status: 200, headers: corsHeaders() };
@@ -104,7 +106,7 @@ app.http("chat", {
   methods: ["POST"],
   authLevel: "function",
   route: "chat",
-  handler: chatHandler,
+  handler: withAuth(chatHandler),
 });
 
 app.http("chat-preflight", {

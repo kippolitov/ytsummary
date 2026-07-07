@@ -33,5 +33,12 @@ coverage/
 playwright-report/
 test-results/
 
+# Local Azurite storage emulator persistence
+AzuriteConfig
+__azurite_db_*__.json
+__blobstorage__/
+__queuestorage__/
+__tablestorage__/
+
 # Logs
 *.log
