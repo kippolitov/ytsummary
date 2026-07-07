@@ -18,9 +18,12 @@
 </head>
 <body>
 <h1>Privacy Policy — Video Knowledge Panel</h1>
-<p class="updated">Last updated: July 5, 2026</p>
+<p class="updated">Last updated: July 7, 2026</p>
 
-<p>Video Knowledge Panel ("the extension") is a Chrome extension that summarizes YouTube videos and lets you chat about their content. This page explains what data the extension handles, how it's used, and what choices you have.</p>
+<p>Video Knowledge Panel ("the extension") is a Chrome extension that summarizes YouTube videos and lets you chat about their content. Access is invitation-only: you must sign in with a Google account that the developer has explicitly authorized. This page explains what data the extension handles, how it's used, and what choices you have.</p>
+
+<h2>Signing in with Google</h2>
+<p>The extension requires Google Sign-In before any feature is usable. When you sign in, Google shares your <strong>email address</strong> and a <strong>stable Google account identifier</strong> with our backend. We use this only to check your account against a developer-maintained list of authorized users (<code>AllowedUsers</code>) — if you're not on it, you'll see an "invitation-only" message and no further data is read or processed. We do not request any Google scopes beyond your basic account identity (<code>openid</code>, <code>email</code>) — we never access your Google Drive, Gmail, contacts, or any other Google data.</p>
 
 <h2>What the extension accesses</h2>
 <p>The extension only reads the page you're actively viewing, and only after you click its toolbar icon (via Chrome's <code>activeTab</code> permission) — it never reads pages in the background and never requests broad access to your browsing.</p>
@@ -31,26 +34,30 @@
 </ul>
 
 <h2>How that data is used</h2>
-<p>This content is sent to a backend service (an Azure Function that we operate) which calls Azure OpenAI to generate a summary, key topics, step-by-step breakdown, references, or a chat response. The content is processed to produce that response and is not used for any other purpose — not advertising, not profiling, not resale.</p>
+<p>This content is sent to a backend service (an Azure Function that we operate) which calls Azure OpenAI to generate a summary, key topics, step-by-step breakdown, references, or a chat response. The content is processed to produce that response and is not used for any other purpose — not advertising, not profiling, not resale. If you explicitly click <strong>Save</strong> on a video, that same summary and chat history are additionally stored as described below so you can return to them later.</p>
 
 <h2>What is stored, and where</h2>
 <ul>
-  <li><strong>In your browser:</strong> the current video's summary and chat history are kept in <code>chrome.storage.session</code>, which Chrome automatically clears when you close the browser. Your theme preference (light/dark/system) is kept in <code>localStorage</code> until you change it or clear site data.</li>
-  <li><strong>On our servers:</strong> nothing is persisted after your request completes. Our backend is a stateless API with no database — video transcripts and chat messages are processed in memory to generate a response and then discarded. Standard operational telemetry (request counts, latency, errors) is collected via Azure Application Insights to keep the service running, but this does not include the content of your video transcripts or chat messages.</li>
+  <li><strong>In your browser:</strong> your signed-in session (a Google ID token and its expiry) is kept in <code>chrome.storage.local</code> so you stay signed in across browser restarts. The current video's summary and chat history are kept in <code>chrome.storage.session</code>, which Chrome automatically clears when you close the browser. Your theme preference (light/dark/system) is kept in <code>localStorage</code> until you change it or clear site data.</li>
+  <li><strong>On our servers, for sign-in:</strong> your email address, Google account identifier, and the date you were authorized are stored indefinitely in an <code>AllowedUsers</code> table so the extension can recognize you on future sign-ins. This is removed only when the developer revokes your access.</li>
+  <li><strong>On our servers, only for videos you explicitly save:</strong> clicking "Save" stores that video's title, channel, URL, summary, and chat history (up to the most recent 50 messages) indefinitely, tied to your Google account identifier, so you can find it again from any device signed in with the same account. This is only ever written by your own explicit action — viewing or chatting about a video never saves it on its own. You can remove a saved video at any time via "Unsave," which deletes that data immediately.</li>
+  <li><strong>Anything you don't explicitly save:</strong> unchanged from before — processed in memory to generate a response and then discarded, with no server-side persistence beyond the request.</li>
 </ul>
+<p>Standard operational telemetry (request counts, latency, errors) is collected via Azure Application Insights to keep the service running, but this does not include the content of your video transcripts, chat messages, or saved video data.</p>
 
 <h2>Third parties</h2>
-<p>The only third-party processor involved is <a href="https://www.microsoft.com/en-us/trust-center/privacy" target="_blank" rel="noopener">Microsoft Azure OpenAI Service</a>, which processes the content described above to generate responses, under Microsoft's own enterprise data handling commitments. We do not use advertising networks, analytics trackers, or any service that profiles or resells your data. We do not sell your data to anyone, under any circumstances.</p>
+<p><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a> is used solely to verify your identity via Sign-In, as described above. <a href="https://www.microsoft.com/en-us/trust-center/privacy" target="_blank" rel="noopener">Microsoft Azure OpenAI Service</a> processes video/chat content to generate responses, and Azure Table Storage hosts the <code>AllowedUsers</code>/saved-video data described above, both under Microsoft's own enterprise data handling commitments. We do not use advertising networks, analytics trackers, or any service that profiles or resells your data. We do not sell your data to anyone, under any circumstances.</p>
 
 <h2>Permissions the extension requests</h2>
 <ul>
+  <li><code>identity</code> — to sign you in with Google and restrict the extension to authorized accounts</li>
   <li><code>activeTab</code> / <code>scripting</code> — to read the transcript of the video you're actively viewing, only when you click the toolbar icon</li>
-  <li><code>storage</code> — to cache the current video's summary and chat history locally, and remember your theme preference</li>
+  <li><code>storage</code> — to cache the current video's summary and chat history locally, keep you signed in, and remember your theme preference</li>
   <li><code>sidePanel</code> — to display the extension's UI in Chrome's side panel</li>
 </ul>
 
 <h2>Your choices</h2>
-<p>Since nothing is stored server-side and browser-side data is session-scoped or clears with your theme setting, there is little persistent data to manage. You can remove all locally cached data at any time by closing your browser, clearing the extension's site data in Chrome settings, or uninstalling the extension.</p>
+<p>You can remove any individual saved video yourself at any time via its "Unsave" control — this deletes that video's stored summary and chat history immediately. To have your <code>AllowedUsers</code> entry or any remaining saved videos deleted entirely, contact us using the details below and we'll remove them. Signing out or uninstalling the extension clears your locally cached session and browser-side data, but does not by itself delete anything already stored on our servers — use "Unsave" or contact us for that.</p>
 
 <h2>Children's privacy</h2>
 <p>The extension is not directed at children under 13 and does not knowingly collect data from them.</p>
