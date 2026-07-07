@@ -47,6 +47,7 @@ jobs:
         env:
           WXT_AZURE_FUNCTION_URL: ${{ secrets.AZURE_FUNCTION_URL || 'https://placeholder.example.com/api/analyze' }}
           WXT_AZURE_FUNCTION_KEY: ${{ secrets.AZURE_FUNCTION_KEY || '' }}
+          WXT_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID || 'placeholder-client-id.apps.googleusercontent.com' }}
         run: npm run build
         working-directory: extension
 
