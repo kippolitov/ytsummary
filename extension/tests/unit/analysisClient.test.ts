@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("../../services/authClient", () => ({
+  getIdToken: vi.fn(),
+}));
+
 import { postAnalysis } from "../../services/analysisClient";
+import { getIdToken } from "../../services/authClient";
 import type { AnalysisResult, Video } from "../../types/index";
 
 const video: Video = {
@@ -25,6 +31,7 @@ describe("analysisClient — postAnalysis", () => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubGlobal("WXT_AZURE_FUNCTION_URL", "http://localhost:7071/api/analyze");
     vi.stubGlobal("WXT_AZURE_FUNCTION_KEY", "test-key");
+    vi.mocked(getIdToken).mockReset().mockResolvedValue("test-id-token");
   });
 
   afterEach(() => {
@@ -84,8 +91,31 @@ describe("analysisClient — postAnalysis", () => {
     [500, "service-error", true],
     [503, "service-error", true],
     [418, "unknown", true],
+    [401, "unauthenticated", false],
+    [403, "not-authorized", false],
   ])("maps HTTP %i to PanelError code %s", async (status, code, retryable) => {
     vi.mocked(fetch).mockResolvedValue(new Response("{}", { status }));
     await expect(postAnalysis(video)).rejects.toMatchObject({ code, retryable });
+  });
+
+  it("attaches the Authorization bearer header when a token is available", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(result), { status: 200 }));
+
+    await postAnalysis(video);
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    const headers = new Headers((init as RequestInit).headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-id-token");
+  });
+
+  it("omits the Authorization header when no token is stored", async () => {
+    vi.mocked(getIdToken).mockResolvedValue(null);
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(result), { status: 200 }));
+
+    await postAnalysis(video);
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]!;
+    const headers = new Headers((init as RequestInit).headers);
+    expect(headers.has("Authorization")).toBe(false);
   });
 });

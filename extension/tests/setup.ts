@@ -8,6 +8,15 @@ const chromeMock = {
       set: vi.fn(),
       remove: vi.fn(),
     },
+    local: {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    },
+    onChanged: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
   },
   runtime: {
     sendMessage: vi.fn(),
@@ -18,6 +27,10 @@ const chromeMock = {
   },
   sidePanel: {
     setPanelBehavior: vi.fn().mockResolvedValue(undefined),
+  },
+  identity: {
+    launchWebAuthFlow: vi.fn(),
+    getRedirectURL: vi.fn(() => "https://test-extension-id.chromiumapp.org/"),
   },
 };
 

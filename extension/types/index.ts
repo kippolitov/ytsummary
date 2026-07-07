@@ -1,4 +1,5 @@
 export type { ChatMessage, ChatSession, ChatHistoryItem, ChatRequest, ChatStreamChunk, ChatRole, ChatMessageType } from "./chat";
+import type { ChatMessage } from "./chat";
 
 export interface Video {
   videoId: string;
@@ -42,6 +43,8 @@ export type ErrorCode =
   | "service-error"
   | "rate-limited"
   | "transcript-too-long"
+  | "unauthenticated"
+  | "not-authorized"
   | "unknown";
 
 export interface PanelError {
@@ -52,6 +55,30 @@ export interface PanelError {
 }
 
 export type PanelStatus = "idle" | "loading" | "ready" | "error" | "no-transcript";
+
+/** One entry of the GET /api/saved-videos list response body (contracts/saved-videos-api.md). */
+export interface SavedVideoSummary {
+  videoId: string;
+  videoTitle: string;
+  channelName: string;
+  videoUrl: string;
+  durationSeconds: number;
+  savedAt: string;
+  updatedAt: string;
+}
+
+/** GET /api/saved-videos/{videoId} and PUT response body (contracts/saved-videos-api.md). */
+export interface SavedVideoDetail {
+  videoId: string;
+  videoTitle: string;
+  channelName: string;
+  videoUrl: string;
+  durationSeconds: number;
+  summary: AnalysisResult;
+  messages: ChatMessage[];
+  savedAt: string;
+  updatedAt: string;
+}
 
 export interface KnowledgePanelState {
   videoId: string;

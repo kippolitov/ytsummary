@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+vi.mock("../../components/Saved/SaveButton", () => ({
+  SaveButton: ({ videoId }: { videoId: string }) => (
+    <button aria-label="Save video" data-testid={`save-${videoId}`}>
+      Save
+    </button>
+  ),
+}));
+
 import { KnowledgePanel } from "../../components/KnowledgePanel/KnowledgePanel";
 import type { AnalysisResult } from "../../types/index";
 
