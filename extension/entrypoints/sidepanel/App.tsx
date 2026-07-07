@@ -38,6 +38,13 @@ export function App() {
   const [selectedSavedVideoId, setSelectedSavedVideoId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Tells background the panel is open, which is what triggers reading the
+    // active tab's transcript — nothing is read until this connects.
+    const port = chrome.runtime.connect({ name: "sidepanel" });
+    return () => port.disconnect();
+  }, []);
+
+  useEffect(() => {
     async function hydrate() {
       const video = await getLastVideo();
       if (!video) return;

@@ -123,11 +123,27 @@ export default defineContentScript({
       window.postMessage({ type: "YT_TRANSCRIPT", videoId, transcript }, "*");
     }
 
+    // Extraction only starts once the side panel asks for it (relayed from
+    // background via the isolated-world content script) — never on page load
+    // on its own, so a video's transcript is never read in the background
+    // without the user having opened the panel first.
+    let armed = false;
     let lastVideoId: string | null = null;
-    const initial = getVideoId();
-    if (initial) { lastVideoId = initial; void processVideo(initial); }
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== window) return;
+      const data = event.data as Record<string, unknown> | null;
+      if (data?.type !== "YTKP_REQUEST_TRANSCRIPT") return;
+
+      armed = true;
+      const vid = getVideoId();
+      if (!vid || vid === lastVideoId) return;
+      lastVideoId = vid;
+      void processVideo(vid);
+    });
 
     window.addEventListener("yt-navigate-finish", () => {
+      if (!armed) return;
       const vid = getVideoId();
       if (!vid || vid === lastVideoId) return;
       lastVideoId = vid;

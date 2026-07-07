@@ -10,12 +10,17 @@ function sentMessages(): unknown[] {
   return (chrome.runtime.sendMessage as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
 }
 
+let runtimeMessageListener: (message: { type: string }) => void;
+
 beforeAll(async () => {
   vi.stubGlobal("defineContentScript", (def: { main: () => void }) => def);
   const entrypoint = (await import("../../entrypoints/content")).default as {
     main: () => void;
   };
   entrypoint.main();
+
+  const addListener = chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>;
+  runtimeMessageListener = addListener.mock.calls.at(-1)![0];
 });
 
 describe("content entrypoint", () => {
@@ -98,6 +103,24 @@ describe("content entrypoint", () => {
   it("ignores unrelated message types", () => {
     postWindowMessage({ type: "SOMETHING_ELSE" });
     expect(sentMessages()).toHaveLength(0);
+  });
+
+  it("relays REQUEST_TRANSCRIPT from background into the page as a window message", () => {
+    const postMessageSpy = vi.spyOn(window, "postMessage");
+
+    runtimeMessageListener({ type: MessageType.REQUEST_TRANSCRIPT });
+
+    expect(postMessageSpy).toHaveBeenCalledWith({ type: "YTKP_REQUEST_TRANSCRIPT" }, "*");
+    postMessageSpy.mockRestore();
+  });
+
+  it("ignores unrelated runtime messages", () => {
+    const postMessageSpy = vi.spyOn(window, "postMessage");
+
+    runtimeMessageListener({ type: "SOME_OTHER_TYPE" });
+
+    expect(postMessageSpy).not.toHaveBeenCalled();
+    postMessageSpy.mockRestore();
   });
 
   it("swallows runtime sendMessage failures", () => {
