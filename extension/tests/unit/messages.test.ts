@@ -10,6 +10,7 @@ describe("MessageType", () => {
       ANALYSIS_RESULT: "ANALYSIS_RESULT",
       ANALYSIS_ERROR: "ANALYSIS_ERROR",
       RETRY_ANALYSIS: "RETRY_ANALYSIS",
+      REQUEST_TRANSCRIPT: "REQUEST_TRANSCRIPT",
     });
   });
 });

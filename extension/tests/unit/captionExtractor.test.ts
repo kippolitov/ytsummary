@@ -34,6 +34,12 @@ function setPlayerResponse(videoId: string, captionUrl?: string): void {
   };
 }
 
+function requestTranscript(): void {
+  window.dispatchEvent(
+    new MessageEvent("message", { data: { type: "YTKP_REQUEST_TRANSCRIPT" }, source: window })
+  );
+}
+
 function postedTranscripts(videoId: string): string[] {
   return postSpy.mock.calls
     .map((c) => c[0] as { type: string; videoId: string; transcript?: string })
@@ -56,14 +62,32 @@ beforeAll(async () => {
   script = (await import("../../entrypoints/captionExtractor.content")).default as ScriptDef;
 });
 
+// main() registers window listeners that are never torn down by the script
+// itself (it's a content script — normally the page unload does that). Each
+// test calls main() fresh, so without this tracking, listeners from earlier
+// tests stay attached and fire on later tests' events too.
+let addEventListenerSpy: ReturnType<typeof vi.spyOn>;
+let trackedListeners: Array<[string, EventListenerOrEventListenerObject]>;
+
 describe("captionExtractor entrypoint", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     postSpy = vi.spyOn(window, "postMessage").mockImplementation(() => {}) as ReturnType<typeof vi.spyOn>;
+
+    trackedListeners = [];
+    const realAddEventListener = window.addEventListener.bind(window);
+    addEventListenerSpy = vi
+      .spyOn(window, "addEventListener")
+      .mockImplementation((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+        trackedListeners.push([type, listener]);
+        realAddEventListener(type, listener, options);
+      });
   });
 
   afterEach(() => {
     postSpy.mockRestore();
+    trackedListeners.forEach(([type, listener]) => window.removeEventListener(type, listener));
+    addEventListenerSpy.mockRestore();
     vi.unstubAllGlobals();
     vi.stubGlobal("defineContentScript", (def: ScriptDef) => def);
   });
@@ -71,6 +95,29 @@ describe("captionExtractor entrypoint", () => {
   it("does nothing when the page has no video id", async () => {
     setVideoUrl(null);
     await script.main();
+    requestTranscript();
+    expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not extract until the panel requests a transcript", async () => {
+    setVideoUrl("vidnorequest1");
+    setPlayerResponse("vidnorequest1", "https://yt.example/norequest");
+    vi.mocked(fetch).mockResolvedValue(new Response(TIMED_XML, { status: 200 }));
+
+    await script.main();
+    expect(postSpy).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("ignores yt-navigate-finish before any transcript has been requested", async () => {
+    setVideoUrl("vidnorequest2");
+    setPlayerResponse("vidnorequest2", "https://yt.example/norequest2");
+    vi.mocked(fetch).mockResolvedValue(new Response(TIMED_XML, { status: 200 }));
+
+    await script.main();
+    setVideoUrl("vidnorequest3");
+    window.dispatchEvent(new Event("yt-navigate-finish"));
+
     expect(postSpy).not.toHaveBeenCalled();
   });
 
@@ -81,6 +128,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     await waitForTranscript(vid);
 
     const types = postSpy.mock.calls
@@ -98,6 +146,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("Hello world");
     expect(String(vi.mocked(fetch).mock.calls[0]![0])).toBe("https://yt.example/captions2");
   });
@@ -109,6 +158,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(CLASSIC_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe('Tom & Jerry say "hi"');
   });
 
@@ -121,6 +171,7 @@ describe("captionExtractor entrypoint", () => {
       .mockResolvedValueOnce(new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("Hello world");
     expect(vi.mocked(fetch).mock.calls[1]![1]).toMatchObject({ credentials: "omit" });
   });
@@ -135,6 +186,7 @@ describe("captionExtractor entrypoint", () => {
       .mockResolvedValueOnce(new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("Hello world");
     expect(vi.mocked(fetch).mock.calls[2]![1]).toMatchObject({ referrerPolicy: "no-referrer" });
   });
@@ -159,6 +211,7 @@ describe("captionExtractor entrypoint", () => {
       .mockResolvedValueOnce(new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("Hello world");
     expect(String(vi.mocked(fetch).mock.calls[0]![0])).toContain("youtubei/v1/player");
   });
@@ -170,6 +223,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockResolvedValue(new Response("nope", { status: 403 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("");
   });
 
@@ -180,6 +234,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("");
   });
 
@@ -190,6 +245,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockRejectedValue(new TypeError("network down"));
 
     await script.main();
+    requestTranscript();
     expect(await waitForTranscript(vid)).toBe("");
   });
 
@@ -203,6 +259,7 @@ describe("captionExtractor entrypoint", () => {
     vi.mocked(fetch).mockImplementation(async () => new Response(TIMED_XML, { status: 200 }));
 
     await script.main();
+    requestTranscript();
     await waitForTranscript(vid);
 
     setVideoUrl(nextVid);

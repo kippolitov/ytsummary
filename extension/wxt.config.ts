@@ -17,7 +17,7 @@ export default defineConfig({
     name: "Video Knowledge Panel",
     description:
       "Displays a structured knowledge panel alongside YouTube videos",
-    permissions: ["sidePanel", "storage", "scripting", "activeTab", "identity"],
+    permissions: ["sidePanel", "storage", "identity"],
     side_panel: {
       default_path: "sidepanel.html",
     },
