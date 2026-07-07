@@ -12,6 +12,14 @@ import type { PanelError, Video } from "../types/index";
 declare const WXT_AZURE_FUNCTION_URL: string;
 
 const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;
+const SIDE_PANEL_PORT_NAME = "sidepanel";
+
+/**
+ * True only while the side panel is connected. Gates every transcript
+ * read/analysis: a tab's content script is never asked for its transcript
+ * unless the user has actually opened the panel (FR: no background reading).
+ */
+let panelOpen = false;
 
 export default defineBackground({
   main() {
@@ -32,8 +40,43 @@ export default defineBackground({
         return true;
       }
     );
+
+    chrome.runtime.onConnect.addListener((port) => {
+      if (port.name !== SIDE_PANEL_PORT_NAME) return;
+      panelOpen = true;
+      void requestTranscriptForActiveTab();
+      port.onDisconnect.addListener(() => {
+        panelOpen = false;
+      });
+    });
+
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+      if (!panelOpen) return;
+      void requestTranscriptForTab(activeInfo.tabId);
+    });
+
+    // A hard navigation (typed URL, clicked link that isn't a YouTube SPA
+    // soft-nav) reloads the page and re-injects the content script from
+    // scratch, discarding its "armed" state. onActivated doesn't fire for
+    // this — the tab doesn't change, only its document does — so it needs
+    // its own trigger, still gated to the active tab of an open panel.
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+      if (!panelOpen || !tab.active || changeInfo.status !== "complete") return;
+      requestTranscriptForTab(tabId);
+    });
   },
 });
+
+async function requestTranscriptForActiveTab(): Promise<void> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id !== undefined) void requestTranscriptForTab(tab.id);
+}
+
+function requestTranscriptForTab(tabId: number): void {
+  chrome.tabs.sendMessage(tabId, { type: MessageType.REQUEST_TRANSCRIPT }).catch(() => {
+    // Tab isn't a YouTube watch page, or has no content script loaded yet.
+  });
+}
 
 /**
  * Attempts silent token renewal on every extension/background start (research.md §1) —

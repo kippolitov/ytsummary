@@ -1,5 +1,6 @@
 import { MessageType } from "../types/messages";
 import type {
+  ExtensionMessage,
   TranscriptReadyMessage,
   VideoChangedMessage,
 } from "../types/messages";
@@ -9,6 +10,14 @@ export default defineContentScript({
   matches: ["*://www.youtube.com/watch*"],
   runAt: "document_idle",
   main() {
+    // Background only sends this after the side panel is open — relay it
+    // into the page's MAIN world, which is where extraction actually runs.
+    chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+      if (message.type === MessageType.REQUEST_TRANSCRIPT) {
+        window.postMessage({ type: "YTKP_REQUEST_TRANSCRIPT" }, "*");
+      }
+    });
+
     window.addEventListener("message", (event) => {
       if (event.source !== window) return;
       const data = event.data as Record<string, unknown> | null;

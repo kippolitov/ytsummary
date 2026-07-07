@@ -18,7 +18,7 @@
 </head>
 <body>
 <h1>Privacy Policy — Video Knowledge Panel</h1>
-<p class="updated">Last updated: July 7, 2026</p>
+<p class="updated">Last updated: July 6, 2026</p>
 
 <p>Video Knowledge Panel ("the extension") is a Chrome extension that summarizes YouTube videos and lets you chat about their content. Access is invitation-only: you must sign in with a Google account that the developer has explicitly authorized. This page explains what data the extension handles, how it's used, and what choices you have.</p>
 
@@ -26,7 +26,7 @@
 <p>The extension requires Google Sign-In before any feature is usable. When you sign in, Google shares your <strong>email address</strong> and a <strong>stable Google account identifier</strong> with our backend. We use this only to check your account against a developer-maintained list of authorized users (<code>AllowedUsers</code>) — if you're not on it, you'll see an "invitation-only" message and no further data is read or processed. We do not request any Google scopes beyond your basic account identity (<code>openid</code>, <code>email</code>) — we never access your Google Drive, Gmail, contacts, or any other Google data.</p>
 
 <h2>What the extension accesses</h2>
-<p>The extension only reads the page you're actively viewing, and only after you click its toolbar icon (via Chrome's <code>activeTab</code> permission) — it never reads pages in the background and never requests broad access to your browsing.</p>
+<p>The extension only reads the page you're actively viewing, and only after you open its side panel by clicking the toolbar icon — it never reads YouTube pages in the background, before you've opened the panel, or on tabs you haven't switched to, and never requests broad access to your browsing.</p>
 <p>When you open the panel on a YouTube video, the extension reads:</p>
 <ul>
   <li>The video's transcript/captions, title, and channel name</li>
@@ -51,9 +51,8 @@
 <h2>Permissions the extension requests</h2>
 <ul>
   <li><code>identity</code> — to sign you in with Google and restrict the extension to authorized accounts</li>
-  <li><code>activeTab</code> / <code>scripting</code> — to read the transcript of the video you're actively viewing, only when you click the toolbar icon</li>
-  <li><code>storage</code> — to cache the current video's summary and chat history locally, keep you signed in, and remember your theme preference</li>
-  <li><code>sidePanel</code> — to display the extension's UI in Chrome's side panel</li>
+  <li><code>storage</code> — to cache the current video's summary and chat history locally and keep you signed in</li>
+  <li><code>sidePanel</code> — to display the extension's UI in Chrome's side panel, and to detect when you've opened it so the extension knows it's safe to read the active tab</li>
 </ul>
 
 <h2>Your choices</h2>

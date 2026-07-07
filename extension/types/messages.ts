@@ -7,6 +7,7 @@ export const MessageType = {
   ANALYSIS_RESULT: "ANALYSIS_RESULT",
   ANALYSIS_ERROR: "ANALYSIS_ERROR",
   RETRY_ANALYSIS: "RETRY_ANALYSIS",
+  REQUEST_TRANSCRIPT: "REQUEST_TRANSCRIPT",
 } as const;
 
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
@@ -41,10 +42,19 @@ export interface RetryAnalysisMessage {
   videoId: string;
 }
 
+/** Sent from background to a specific tab's content script — asks it to
+ * (re)extract the transcript for whatever video is currently loaded there.
+ * Only dispatched when the side panel is open, so a tab is never read
+ * unless the user has actually invoked the extension. */
+export interface RequestTranscriptMessage {
+  type: typeof MessageType.REQUEST_TRANSCRIPT;
+}
+
 export type ExtensionMessage =
   | TranscriptReadyMessage
   | NoTranscriptMessage
   | VideoChangedMessage
   | AnalysisResultMessage
   | AnalysisErrorMessage
-  | RetryAnalysisMessage;
+  | RetryAnalysisMessage
+  | RequestTranscriptMessage;
