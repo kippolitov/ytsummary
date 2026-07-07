@@ -16,7 +16,7 @@ export default defineConfig({
   manifest: {
     name: "Video Knowledge Panel",
     description:
-      "Displays a structured knowledge panel alongside YouTube videos",
+      "Summarize any YouTube video and chat with it — key topics, timestamps, and a blog post, one click away.",
     permissions: ["sidePanel", "storage", "identity"],
     side_panel: {
       default_path: "sidepanel.html",
